@@ -1,0 +1,59 @@
+<%@ Master Language="C#" AutoEventWireup="true" CodeBehind="Site.master.cs" Inherits="Manajemen_Inventaris.SiteMaster" %>
+
+<!DOCTYPE html>
+
+<html lang="en">
+<head runat="server">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title><%: Page.Title %> - Manajemen Inventaris</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <asp:ContentPlaceHolder ID="HeadContent" runat="server">
+    </asp:ContentPlaceHolder>
+</head>
+    <body class="bg-gray-50 flex flex-col min-h-screen">
+    <form runat="server" class="flex flex-col min-h-screen">
+        <asp:ScriptManager runat="server">
+            <Scripts>
+                <asp:ScriptReference Path="https://code.jquery.com/jquery-3.6.0.min.js" />
+            </Scripts>
+        </asp:ScriptManager>
+        
+        <header class="bg-white shadow-sm">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16">
+                    <div class="flex">
+                        <div class="flex-shrink-0 flex items-center">
+                            <h1 class="text-xl font-bold text-indigo-600">Manajemen Inventaris</h1>
+                        </div>
+                        <nav class="hidden md:ml-6 md:flex md:space-x-8">
+                            <asp:ContentPlaceHolder ID="NavContent" runat="server">
+                            </asp:ContentPlaceHolder>
+                        </nav>
+                    </div>
+                    <div class="flex items-center">
+                        <asp:ContentPlaceHolder ID="LoginStatusContent" runat="server">
+                        </asp:ContentPlaceHolder>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <asp:ContentPlaceHolder ID="MainContent" runat="server">
+            </asp:ContentPlaceHolder>
+        </main>
+
+        <footer class="bg-white mt-auto">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="border-t border-gray-200 py-4">
+                    <p class="text-center text-sm text-gray-500">
+                        &copy; <%: DateTime.Now.Year %> - Manajemen Inventaris
+                    </p>
+                </div>
+            </div>
+        </footer>
+    </form>
+</body>
+</html> 

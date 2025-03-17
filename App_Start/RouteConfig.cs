@@ -13,8 +13,15 @@ namespace Manajemen_Inventaris
         {
             routes.IgnoreRoute("{resource}.axd/{*pathInfo}");
 
+            // Add a route for the root URL to redirect to Login.aspx
+            routes.MapPageRoute(
+                "Default",
+                "",
+                "~/Login.aspx"
+            );
+
             routes.MapRoute(
-                name: "Default",
+                name: "DefaultMVC",
                 url: "{controller}/{action}/{id}",
                 defaults: new { controller = "Home", action = "Index", id = UrlParameter.Optional }
             );
