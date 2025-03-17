@@ -18,12 +18,15 @@ namespace Manajemen_Inventaris
             RouteConfig.RegisterRoutes(RouteTable.Routes);
         }
 
-        protected void Application_BeginRequest(object sender, EventArgs e)
+        void Application_BeginRequest(object sender, EventArgs e)
         {
-            // Redirect root URL to Login.aspx
+            // Handle root URL requests
             if (Request.Url.AbsolutePath == "/")
             {
-                Response.Redirect("~/Login.aspx");
+                // Redirect root URL to Login.aspx
+                string redirectUrl = VirtualPathUtility.ToAbsolute("~/Pages/Auth/Login.aspx");
+                Response.Clear();
+                Response.Redirect(redirectUrl);
             }
         }
     }

@@ -1,23 +1,25 @@
 using System;
 using System.Web.UI;
 
-namespace Manajemen_Inventaris
+namespace Manajemen_Inventaris.Pages.Dashboard
 {
     public partial class Dashboard : Page
     {
         protected void Page_Load(object sender, EventArgs e)
         {
-            // Check if user is authenticated
+            // Check if user is logged in
             if (Session["UserID"] == null)
             {
-                Response.Redirect("~/Login.aspx");
+                // Redirect to login page if not logged in
+                Response.Redirect("~/Pages/Auth/Login.aspx");
                 return;
             }
 
             if (!IsPostBack)
             {
-                // Display username
-                litUsername.Text = Session["Username"].ToString();
+                // Display welcome message
+                string username = Session["Username"].ToString();
+                lblWelcome.Text = $"Selamat datang, {username}!";
             }
         }
 
@@ -28,7 +30,7 @@ namespace Manajemen_Inventaris
             Session.Abandon();
 
             // Redirect to login page
-            Response.Redirect("~/Login.aspx");
+            Response.Redirect("~/Pages/Auth/Login.aspx");
         }
     }
 }

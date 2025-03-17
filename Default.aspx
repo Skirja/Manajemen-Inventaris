@@ -6,7 +6,7 @@
 
     <head runat="server">
         <title>Redirecting...</title>
-        <meta http-equiv="refresh" content="0;url=Login.aspx" />
+        <meta http-equiv="refresh" content="0;url=Pages/Auth/Login.aspx" />
     </head>
 
     <body>

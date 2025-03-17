@@ -17,7 +17,7 @@ namespace Manajemen_Inventaris
             routes.MapPageRoute(
                 "Default",
                 "",
-                "~/Login.aspx"
+                "~/Pages/Auth/Login.aspx"
             );
 
             routes.MapRoute(

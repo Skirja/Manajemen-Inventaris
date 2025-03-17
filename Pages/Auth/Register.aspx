@@ -1,5 +1,5 @@
 <%@ Page Title="Register" Language="C#" MasterPageFile="~/Site.Master" AutoEventWireup="true"
-    CodeBehind="Register.aspx.cs" Inherits="Manajemen_Inventaris.Register" %>
+    CodeBehind="Register.aspx.cs" Inherits="Manajemen_Inventaris.Pages.Auth.Register" %>
 
     <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
     </asp:Content>
@@ -114,7 +114,7 @@
 
                         <div class="text-base text-center">
                             <p>Sudah punya akun?
-                                <asp:HyperLink ID="lnkLogin" runat="server" NavigateUrl="~/Login.aspx"
+                                <asp:HyperLink ID="lnkLogin" runat="server" NavigateUrl="~/Pages/Auth/Login.aspx"
                                     CssClass="font-medium text-indigo-600 hover:text-indigo-500">
                                     Masuk disini
                                 </asp:HyperLink>

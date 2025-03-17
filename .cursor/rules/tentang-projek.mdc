@@ -11,7 +11,7 @@ Platform SaaS ini memungkinkan pengguna mengunggah gambar barang, dan API AI aka
 Fungsi: Pengguna mengunggah gambar barang inventaris, aplikasi menggunakan API AI untuk mengidentifikasi barang tersebut, dan informasi disimpan dalam sistem inventaris.Fitur Potensial: Kategorisasi otomatis, integrasi dengan pemindai kode batang, peringatan stok rendah berdasarkan barang yang dikenali.
 
 ## yang harus kamu lakukan
-- melakukan perbaikan atau pembuatan kode berdasarkan yang saya minta, kamu harus fokus melakukan perbaikannya dan harus selalu inget permintaan saya, selalu breakdown dulu setiap permintaan saya dan pastikan kamu memikirkan dengan baik langkah yang harus diambil. kamu harus menulis kode dengan bersih dan rapih **(clean code)**, dan membuat projeknya **modular**. pastikan juga melakukan apa yang tertulis di dalam `yang saya inginkan`. dan pastikan kamu ingat kalau ini menerapkan **Web Form OOP**.
+- melakukan perbaikan atau pembuatan kode berdasarkan yang saya minta, kamu harus fokus melakukan perbaikannya dan harus selalu inget permintaan saya, selalu breakdown dulu setiap permintaan saya dan pastikan kamu memikirkan dengan baik langkah yang harus diambil. kamu harus menulis kode dengan bersih dan rapih **(clean code)**, dan membuat projeknya **modular**. pastikan juga melakukan apa yang tertulis di dalam `yang saya inginkan`. dan pastikan kamu ingat kalau ini menerapkan **Web Form OOP**. selain itu harus menerapkan *OOP sepenuhnya*
 
 - selain selain itu, kamu juga harus memastikan **design dan style untuk semua page konsisten**.
 
@@ -24,6 +24,10 @@ Fungsi: Pengguna mengunggah gambar barang inventaris, aplikasi menggunakan API A
 - **pastikan menggunakan tag ASP bawaan dan logicnya menggunakan codeBehind**
 
 - selalu pastikan bahwa file yang dibuat itu di include dalam [Manajemen-Inventaris.csproj](mdc:Manajemen-Inventaris.csproj)
+
+- pastikan selalu menulis update data database tabelnya pada [CreateDatabase.sql](mdc:App_Data/CreateDatabase.sql) karena akan saya terapkan pada SQL Server, dan akan saya reset databasenya jadi jangan khawatir mengupdate file [CreateDatabase.sql](mdc:App_Data/CreateDatabase.sql)
+
+- pastikan juga struktur foldernya rapih!
 
 ## yang tidak boleh kamu lakukan
 - kamu tidak boleh melakukan hal lain di luar `yang harus kamu lakukan` dan `yang saya inginkan` (perintah saya), jadi scope kamu cukup di situ saja.

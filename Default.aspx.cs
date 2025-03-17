@@ -7,11 +7,8 @@ namespace Manajemen_Inventaris
     {
         protected void Page_Load(object sender, EventArgs e)
         {
-            // Redirect to Login.aspx
-            if (!IsPostBack)
-            {
-                Response.Redirect("~/Login.aspx");
-            }
+            // Redirect to login page
+            Response.Redirect("~/Pages/Auth/Login.aspx");
         }
     }
 }

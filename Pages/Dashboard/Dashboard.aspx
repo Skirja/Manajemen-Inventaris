@@ -1,24 +1,24 @@
 <%@ Page Title="Dashboard" Language="C#" MasterPageFile="~/Site.Master" AutoEventWireup="true"
-    CodeBehind="Dashboard.aspx.cs" Inherits="Manajemen_Inventaris.Dashboard" %>
+    CodeBehind="Dashboard.aspx.cs" Inherits="Manajemen_Inventaris.Pages.Dashboard.Dashboard" %>
 
     <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
     </asp:Content>
 
     <asp:Content ID="NavContent" ContentPlaceHolderID="NavContent" runat="server">
-        <a href="Dashboard.aspx"
+        <a href="~/Pages/Dashboard/Dashboard.aspx" runat="server"
             class="inline-flex items-center px-1 pt-1 border-b-2 border-indigo-500 text-sm font-medium text-gray-900">Dashboard</a>
-        <a href="Inventory.aspx"
+        <a href="~/Pages/Dashboard/Inventory.aspx" runat="server"
             class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300">Inventory</a>
-        <a href="Upload.aspx"
+        <a href="~/Pages/Dashboard/Upload.aspx" runat="server"
             class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300">Upload</a>
-        <a href="Reports.aspx"
+        <a href="~/Pages/Dashboard/Reports.aspx" runat="server"
             class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300">Reports</a>
     </asp:Content>
 
     <asp:Content ID="LoginStatusContent" ContentPlaceHolderID="LoginStatusContent" runat="server">
         <div class="flex items-center space-x-4">
             <span class="text-sm text-gray-700">Welcome, <asp:Literal ID="litUsername" runat="server"></asp:Literal>
-                </span>
+            </span>
             <asp:LinkButton ID="btnLogout" runat="server" OnClick="btnLogout_Click"
                 CssClass="text-sm text-indigo-600 hover:text-indigo-500">Logout</asp:LinkButton>
         </div>
@@ -29,6 +29,8 @@
             <div class="px-4 py-5 sm:px-6">
                 <h3 class="text-lg leading-6 font-medium text-gray-900">Dashboard</h3>
                 <p class="mt-1 max-w-2xl text-sm text-gray-500">Welcome to the Inventory Management System</p>
+                <asp:Label ID="lblWelcome" runat="server" CssClass="text-lg font-medium text-indigo-600 mt-2 block">
+                </asp:Label>
             </div>
             <div class="border-t border-gray-200">
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4">

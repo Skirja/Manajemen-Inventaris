@@ -7,7 +7,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace Manajemen_Inventaris
+namespace Manajemen_Inventaris.Pages.Auth
 {
 
 
