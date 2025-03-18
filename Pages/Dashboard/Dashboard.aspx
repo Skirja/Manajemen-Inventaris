@@ -7,7 +7,7 @@
     <asp:Content ID="NavContent" ContentPlaceHolderID="NavContent" runat="server">
         <a href="~/Pages/Dashboard/Dashboard.aspx" runat="server"
             class="inline-flex items-center px-1 pt-1 border-b-2 border-indigo-500 text-sm font-medium text-gray-900">Dashboard</a>
-        <a href="~/Pages/Dashboard/Inventory.aspx" runat="server"
+        <a href="~/Pages/Dashboard/Inventory/Inventory.aspx" runat="server"
             class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300">Inventory</a>
         <a href="~/Pages/Dashboard/Upload.aspx" runat="server"
             class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300">Upload</a>
@@ -17,10 +17,8 @@
 
     <asp:Content ID="LoginStatusContent" ContentPlaceHolderID="LoginStatusContent" runat="server">
         <div class="flex items-center space-x-4">
-            <span class="text-sm text-gray-700">Welcome, <asp:Literal ID="litUsername" runat="server"></asp:Literal>
-            </span>
             <asp:LinkButton ID="btnLogout" runat="server" OnClick="btnLogout_Click"
-                CssClass="text-sm text-indigo-600 hover:text-indigo-500">Logout</asp:LinkButton>
+                CssClass="text-sm text-red-600 hover:text-red-300">Logout</asp:LinkButton>
         </div>
     </asp:Content>
 

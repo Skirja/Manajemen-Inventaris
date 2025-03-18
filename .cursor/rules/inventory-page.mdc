@@ -1,0 +1,36 @@
+---
+description: create inventory page
+globs: 
+alwaysApply: false
+---
+## Inventory Page
+
+**Purpose:** Central hub for viewing, managing, and organizing all inventory items.
+
+**Key Components:**
+1. **Item List/Grid View**
+   - Sortable columns (name, category, quantity, date added)
+   - Search functionality
+   - Filters by category, status, date range
+   - Thumbnail images of items
+
+2. **Item Management**
+   - Add new items manually
+   - Edit existing items
+   - Delete items
+   - Adjust quantities (stock in/out)
+
+3. **Category Management**
+   - View items by category
+   - Create/edit/delete categories
+   - Assign items to categories
+
+4. **Inventory Status Indicators**
+   - Low stock warnings
+   - Out of stock items
+   - Recently added items
+
+5. **Batch Operations**
+   - Export inventory to CSV/Excel
+   - Bulk edit functionality
+   - Batch categorization

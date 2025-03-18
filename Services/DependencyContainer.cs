@@ -12,6 +12,9 @@ namespace Manajemen_Inventaris.Services
         private static IDataAccess _dataAccess;
         private static IUserRepository _userRepository;
         private static IAuthService _authService;
+        private static ICategoryRepository _categoryRepository;
+        private static IItemRepository _itemRepository;
+        private static IInventoryService _inventoryService;
 
         /// <summary>
         /// Gets the data access instance
@@ -59,6 +62,51 @@ namespace Manajemen_Inventaris.Services
         }
 
         /// <summary>
+        /// Gets the category repository instance
+        /// </summary>
+        public static ICategoryRepository CategoryRepository
+        {
+            get
+            {
+                if (_categoryRepository == null)
+                {
+                    _categoryRepository = new CategoryRepository(DataAccess);
+                }
+                return _categoryRepository;
+            }
+        }
+
+        /// <summary>
+        /// Gets the item repository instance
+        /// </summary>
+        public static IItemRepository ItemRepository
+        {
+            get
+            {
+                if (_itemRepository == null)
+                {
+                    _itemRepository = new ItemRepository(DataAccess);
+                }
+                return _itemRepository;
+            }
+        }
+
+        /// <summary>
+        /// Gets the inventory service instance
+        /// </summary>
+        public static IInventoryService InventoryService
+        {
+            get
+            {
+                if (_inventoryService == null)
+                {
+                    _inventoryService = new InventoryService(CategoryRepository, ItemRepository);
+                }
+                return _inventoryService;
+            }
+        }
+
+        /// <summary>
         /// Resets all dependencies (useful for testing)
         /// </summary>
         public static void Reset()
@@ -66,6 +114,9 @@ namespace Manajemen_Inventaris.Services
             _dataAccess = null;
             _userRepository = null;
             _authService = null;
+            _categoryRepository = null;
+            _itemRepository = null;
+            _inventoryService = null;
         }
     }
 }

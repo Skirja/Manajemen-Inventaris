@@ -1,0 +1,40 @@
+---
+description: create report page
+globs: 
+alwaysApply: false
+---
+## Reports Page
+
+**Purpose:** Generate insights and analytics about inventory status, movements, and trends.
+
+**Key Components:**
+1. **Dashboard Overview**
+   - Key metrics (total items, categories, value)
+   - Stock level summaries
+   - Recent activity
+
+2. **Report Generation**
+   - Customizable report templates
+   - Date range selection
+   - Category/item filtering
+   - Export options (PDF, Excel, CSV)
+
+3. **Inventory Movement Reports**
+   - Stock in/out history
+   - Consumption rates
+   - Reorder suggestions
+
+4. **Category Analysis**
+   - Distribution of items across categories
+   - Category growth over time
+   - AI categorization accuracy
+
+5. **Trend Analysis**
+   - Historical inventory levels
+   - Seasonal patterns
+   - Forecasting for future needs
+
+6. **AI Recognition Statistics**
+   - Success rates of image recognition
+   - Common misidentifications
+   - Learning improvements over time

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <siteMap xmlns="http://schemas.microsoft.com/AspNet/SiteMap-File-1.0" >
   <siteMapNode url="~/Pages/Dashboard/Dashboard.aspx" title="Dashboard" description="Dashboard">
-    <siteMapNode url="~/Pages/Dashboard/Inventory.aspx" title="Inventory" description="Manage Inventory" />
+    <siteMapNode url="~/Pages/Dashboard/Inventory/Inventory.aspx" title="Inventory" description="Manage Inventory" />
     <siteMapNode url="~/Pages/Dashboard/Upload.aspx" title="Upload" description="Upload Images" />
     <siteMapNode url="~/Pages/Dashboard/Reports.aspx" title="Reports" description="View Reports" />
     <siteMapNode url="~/Pages/Dashboard/Settings.aspx" title="Settings" description="Settings" />

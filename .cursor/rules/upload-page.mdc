@@ -1,0 +1,36 @@
+---
+description: create upload page
+globs: 
+alwaysApply: false
+---
+## Upload Page
+
+**Purpose:** Interface for uploading images of inventory items for AI recognition and automatic categorization.
+
+**AI Provider:** Google AI Studio (Not Vetrex AI)
+
+**Key Components:**
+1. **Upload Interface**
+   - Drag-and-drop area for images
+   - Multiple file selection
+   - Progress indicators
+   - File size/type validation
+
+2. **AI Processing Section**
+   - Status of image processing
+   - Preview of recognized items
+   - Confidence scores for AI recognition
+
+3. **Manual Override Options**
+   - Edit AI-suggested categories
+   - Add additional metadata
+   - Correct misidentifications
+
+4. **Batch Processing**
+   - Queue management for multiple uploads
+   - Batch categorization options
+   - Processing history
+
+5. **Integration with Barcode/QR Scanners**
+   - Option to scan barcodes alongside images
+   - Automatic lookup of barcode information
