@@ -361,26 +361,48 @@ namespace Manajemen_Inventaris.DataAccess
             return items;
         }
 
-        private bool AddItemHistory(int itemId, string changeType, int quantityChanged, int previousQuantity, int newQuantity, string notes, int userId)
+        /// <summary>
+        /// Adds a history record for an item
+        /// </summary>
+        /// <param name="history">The history record to add</param>
+        /// <returns>The ID of the created history record</returns>
+        public int AddItemHistory(ItemHistory history)
         {
             string sql = @"
                 INSERT INTO ItemHistory (ItemID, ChangeType, QuantityChanged, PreviousQuantity, NewQuantity, Notes, ChangedBy, ChangedDate)
-                VALUES (@ItemID, @ChangeType, @QuantityChanged, @PreviousQuantity, @NewQuantity, @Notes, @ChangedBy, @ChangedDate)";
+                VALUES (@ItemID, @ChangeType, @QuantityChanged, @PreviousQuantity, @NewQuantity, @Notes, @ChangedBy, @ChangedDate);
+                SELECT SCOPE_IDENTITY();";
 
             var parameters = new Dictionary<string, object>
             {
-                { "@ItemID", itemId },
-                { "@ChangeType", changeType },
-                { "@QuantityChanged", quantityChanged },
-                { "@PreviousQuantity", previousQuantity },
-                { "@NewQuantity", newQuantity },
-                { "@Notes", notes },
-                { "@ChangedBy", userId },
-                { "@ChangedDate", DateTime.Now }
+                { "@ItemID", history.ItemID },
+                { "@ChangeType", history.ChangeType },
+                { "@QuantityChanged", history.QuantityChanged },
+                { "@PreviousQuantity", history.PreviousQuantity },
+                { "@NewQuantity", history.NewQuantity },
+                { "@Notes", history.Notes },
+                { "@ChangedBy", history.ChangedBy },
+                { "@ChangedDate", history.ChangedDate }
             };
 
-            int rowsAffected = _dataAccess.ExecuteNonQuery(sql, parameters);
-            return rowsAffected > 0;
+            return Convert.ToInt32(_dataAccess.ExecuteScalar(sql, parameters));
+        }
+
+        private bool AddItemHistory(int itemId, string changeType, int quantityChanged, int previousQuantity, int newQuantity, string notes, int userId)
+        {
+            var history = new ItemHistory
+            {
+                ItemID = itemId,
+                ChangeType = changeType,
+                QuantityChanged = quantityChanged,
+                PreviousQuantity = previousQuantity,
+                NewQuantity = newQuantity,
+                Notes = notes,
+                ChangedBy = userId,
+                ChangedDate = DateTime.Now
+            };
+
+            return AddItemHistory(history) > 0;
         }
 
         private Item MapRowToItem(DataRow row)

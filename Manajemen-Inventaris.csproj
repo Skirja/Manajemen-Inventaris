@@ -99,6 +99,7 @@
     <Content Include="Pages\Dashboard\Inventory\Inventory.aspx" />
     <Content Include="Uploads\no-image.png" />
     <Content Include="Pages\Dashboard\Inventory\ManageCategories.aspx" />
+    <Content Include="Pages\Dashboard\Inventory\AddItem.aspx" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App_Start\RouteConfig.cs" />
@@ -172,6 +173,13 @@
     </Compile>
     <Compile Include="Pages\Dashboard\Inventory\ManageCategories.aspx.designer.cs">
       <DependentUpon>ManageCategories.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="Pages\Dashboard\Inventory\AddItem.aspx.cs">
+      <DependentUpon>AddItem.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Pages\Dashboard\Inventory\AddItem.aspx.designer.cs">
+      <DependentUpon>AddItem.aspx</DependentUpon>
     </Compile>
   </ItemGroup>
   <ItemGroup>

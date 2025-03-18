@@ -202,6 +202,16 @@ namespace Manajemen_Inventaris.Services
         }
 
         /// <summary>
+        /// Adds a history record for an item
+        /// </summary>
+        /// <param name="history">The history record to add</param>
+        /// <returns>The ID of the created history record</returns>
+        public int AddItemHistory(ItemHistory history)
+        {
+            return _itemRepository.AddItemHistory(history);
+        }
+
+        /// <summary>
         /// Gets low stock items
         /// </summary>
         /// <param name="threshold">The low stock threshold</param>
