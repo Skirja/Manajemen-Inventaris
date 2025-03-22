@@ -41,7 +41,7 @@ VALUES ('Furniture', 'Office furniture and fixtures', 1);
 CREATE TABLE [dbo].[Items] (
     [ItemID] INT IDENTITY(1, 1) NOT NULL,
     [Name] NVARCHAR(100) NOT NULL,
-    [Description] NVARCHAR(255) NULL,
+    [Description] NVARCHAR(MAX) NULL,
     [CategoryID] INT NOT NULL,
     [Quantity] INT NOT NULL DEFAULT 0,
     [ImagePath] NVARCHAR(255) NULL,

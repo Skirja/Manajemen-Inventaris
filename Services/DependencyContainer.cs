@@ -15,6 +15,7 @@ namespace Manajemen_Inventaris.Services
         private static ICategoryRepository _categoryRepository;
         private static IItemRepository _itemRepository;
         private static IInventoryService _inventoryService;
+        private static IAIService _aiService;
 
         /// <summary>
         /// Gets the data access instance
@@ -107,6 +108,21 @@ namespace Manajemen_Inventaris.Services
         }
 
         /// <summary>
+        /// Gets the AI service instance
+        /// </summary>
+        public static IAIService AIService
+        {
+            get
+            {
+                if (_aiService == null)
+                {
+                    _aiService = new AIService();
+                }
+                return _aiService;
+            }
+        }
+
+        /// <summary>
         /// Resets all dependencies (useful for testing)
         /// </summary>
         public static void Reset()
@@ -117,6 +133,7 @@ namespace Manajemen_Inventaris.Services
             _categoryRepository = null;
             _itemRepository = null;
             _inventoryService = null;
+            _aiService = null;
         }
     }
 }

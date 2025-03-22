@@ -61,5 +61,20 @@ namespace Manajemen_Inventaris.Models
         /// Gets or sets the date when the change was made
         /// </summary>
         public DateTime ChangedDate { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the item has AI tags
+        /// </summary>
+        public bool HasAITags { get; set; }
+
+        /// <summary>
+        /// Gets or sets the count of AI tags
+        /// </summary>
+        public int AITagsCount { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the item has an image
+        /// </summary>
+        public bool HasImage { get; set; }
     }
 }

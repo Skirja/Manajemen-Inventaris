@@ -84,6 +84,24 @@ namespace Manajemen_Inventaris.Pages.Dashboard.Inventory
         protected global::System.Web.UI.WebControls.Button btnSearch;
 
         /// <summary>
+        /// pnlNotification control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Panel pnlNotification;
+
+        /// <summary>
+        /// lblNotification control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Label lblNotification;
+
+        /// <summary>
         /// pnlLowStock control.
         /// </summary>
         /// <remarks>
@@ -91,6 +109,15 @@ namespace Manajemen_Inventaris.Pages.Dashboard.Inventory
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
         protected global::System.Web.UI.WebControls.Panel pnlLowStock;
+
+        /// <summary>
+        /// lblLowStock control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Label lblLowStock;
 
         /// <summary>
         /// litLowStockMessage control.
