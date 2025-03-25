@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Manajemen_Inventaris.Models;
 using Manajemen_Inventaris.Pages.Dashboard.Inventory;
+using System;
 
 namespace Manajemen_Inventaris.Services
 {
@@ -130,9 +131,26 @@ namespace Manajemen_Inventaris.Services
         /// <summary>
         /// Gets low stock items
         /// </summary>
-        /// <param name="threshold">The low stock threshold</param>
         /// <returns>A list of items with stock below the threshold</returns>
-        List<Item> GetLowStockItems(int threshold);
+        List<Item> GetLowStockItems();
+
+        #endregion
+
+        #region Dashboard Operations
+
+        /// <summary>
+        /// Gets items added in the last X days
+        /// </summary>
+        /// <param name="days">The number of days</param>
+        /// <returns>A list of items added in the last X days</returns>
+        List<Item> GetRecentItemsByDays(int days);
+
+        /// <summary>
+        /// Gets the most recent activity
+        /// </summary>
+        /// <param name="count">The number of records to retrieve</param>
+        /// <returns>A list of the most recent activity</returns>
+        List<ItemHistory> GetRecentItemHistory(int count);
 
         #endregion
     }

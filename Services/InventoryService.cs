@@ -13,6 +13,7 @@ namespace Manajemen_Inventaris.Services
     {
         private readonly ICategoryRepository _categoryRepository;
         private readonly IItemRepository _itemRepository;
+        private const int DEFAULT_LOW_STOCK_THRESHOLD = 5;
 
         /// <summary>
         /// Initializes a new instance of the InventoryService class
@@ -219,6 +220,66 @@ namespace Manajemen_Inventaris.Services
         public List<Item> GetLowStockItems(int threshold)
         {
             return _itemRepository.GetLowStockItems(threshold);
+        }
+
+        /// <summary>
+        /// Gets low stock items using the default threshold
+        /// </summary>
+        /// <returns>A list of items with stock below the default threshold</returns>
+        public List<Item> GetLowStockItems()
+        {
+            return _itemRepository.GetLowStockItems(DEFAULT_LOW_STOCK_THRESHOLD);
+        }
+
+        #endregion
+
+        #region Dashboard Operations
+
+        /// <summary>
+        /// Gets items added in the last X days
+        /// </summary>
+        /// <param name="days">The number of days</param>
+        /// <returns>A list of items added in the last X days</returns>
+        public List<Item> GetRecentItemsByDays(int days)
+        {
+            var allItems = _itemRepository.GetAllItems();
+            DateTime cutoffDate = DateTime.Now.AddDays(-days);
+
+            return allItems
+                .Where(item => item.CreatedDate >= cutoffDate)
+                .OrderByDescending(item => item.CreatedDate)
+                .ToList();
+        }
+
+        /// <summary>
+        /// Gets the most recent activity across all items
+        /// </summary>
+        /// <param name="count">The number of records to retrieve</param>
+        /// <returns>A list of the most recent activity</returns>
+        public List<ItemHistory> GetRecentItemHistory(int count)
+        {
+            // Get all items to have access to item names
+            var items = _itemRepository.GetAllItems()
+                .ToDictionary(i => i.ItemID, i => i);
+
+            // Get all histories from all items
+            var allHistories = new List<ItemHistory>();
+            foreach (var item in items.Values)
+            {
+                var histories = _itemRepository.GetItemHistory(item.ItemID);
+                foreach (var history in histories)
+                {
+                    // Enrich the history with item name
+                    history.ItemName = item.Name;
+                    allHistories.Add(history);
+                }
+            }
+
+            // Order by timestamp descending and take the most recent ones
+            return allHistories
+                .OrderByDescending(h => h.ChangedDate)
+                .Take(count)
+                .ToList();
         }
 
         #endregion

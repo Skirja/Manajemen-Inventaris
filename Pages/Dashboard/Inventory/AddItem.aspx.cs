@@ -522,11 +522,4 @@ namespace Manajemen_Inventaris.Pages.Dashboard.Inventory
             return false;
         }
     }
-
-    public class CategorySuggestionModel
-    {
-        public string Category { get; set; }
-        public int CategoryId { get; set; }
-        public double Confidence { get; set; }
-    }
 }

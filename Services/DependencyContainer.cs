@@ -16,6 +16,7 @@ namespace Manajemen_Inventaris.Services
         private static IItemRepository _itemRepository;
         private static IInventoryService _inventoryService;
         private static IAIService _aiService;
+        private static IUserService _userService;
 
         /// <summary>
         /// Gets the data access instance
@@ -59,6 +60,21 @@ namespace Manajemen_Inventaris.Services
                     _authService = new AuthService(UserRepository);
                 }
                 return _authService;
+            }
+        }
+
+        /// <summary>
+        /// Gets the user service instance
+        /// </summary>
+        public static IUserService UserService
+        {
+            get
+            {
+                if (_userService == null)
+                {
+                    _userService = new UserService();
+                }
+                return _userService;
             }
         }
 
@@ -134,6 +150,7 @@ namespace Manajemen_Inventaris.Services
             _itemRepository = null;
             _inventoryService = null;
             _aiService = null;
+            _userService = null;
         }
     }
 }

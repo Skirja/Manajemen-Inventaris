@@ -338,6 +338,11 @@ namespace Manajemen_Inventaris.Pages.Dashboard.Inventory
                 // Navigate to view/edit page
                 Response.Redirect($"~/Pages/Dashboard/Inventory/EditItem.aspx?id={itemId}");
             }
+            else if (e.CommandName == "EditItem")
+            {
+                // Navigate to edit page
+                Response.Redirect($"~/Pages/Dashboard/Inventory/EditItem.aspx?id={itemId}");
+            }
             else if (e.CommandName == "DeleteItem")
             {
                 // Delete the item
@@ -356,6 +361,11 @@ namespace Manajemen_Inventaris.Pages.Dashboard.Inventory
 
                 // Reload items
                 LoadItems();
+            }
+            else if (e.CommandName == "AdjustStock")
+            {
+                // Navigate to adjust stock page
+                Response.Redirect($"~/Pages/Dashboard/Inventory/AdjustStock.aspx?id={itemId}");
             }
         }
 
