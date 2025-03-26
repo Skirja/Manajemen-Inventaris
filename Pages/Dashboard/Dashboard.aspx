@@ -9,9 +9,9 @@
             class="inline-flex items-center px-1 pt-1 border-b-2 border-indigo-500 text-sm font-medium text-gray-900">Dashboard</a>
         <a href="~/Pages/Dashboard/Inventory/Inventory.aspx" runat="server"
             class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300">Inventory</a>
-        <a href="~/Pages/Dashboard/Upload.aspx" runat="server"
+        <a href="~/Pages/Dashboard/Upload/Upload.aspx" runat="server"
             class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300">Upload</a>
-        <a href="~/Pages/Dashboard/Reports.aspx" runat="server"
+        <a href="~/Pages/Dashboard/Reports/Reports.aspx" runat="server"
             class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300">Reports</a>
     </asp:Content>
 

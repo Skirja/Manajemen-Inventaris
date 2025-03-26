@@ -283,5 +283,180 @@ namespace Manajemen_Inventaris.Services
         }
 
         #endregion
+
+        #region Reports Operations
+
+        /// <summary>
+        /// Gets inventory movement statistics for a date range
+        /// </summary>
+        /// <param name="startDate">The start date of the range</param>
+        /// <param name="endDate">The end date of the range</param>
+        /// <returns>Dictionary with movement statistics</returns>
+        public Dictionary<string, int> GetInventoryMovementStats(DateTime startDate, DateTime endDate)
+        {
+            // Get all the item history in the date range
+            var histories = _itemRepository.GetItemHistory()
+                .Where(h => h.ChangedDate >= startDate && h.ChangedDate <= endDate)
+                .ToList();
+
+            var stats = new Dictionary<string, int>
+            {
+                { "StockIn", 0 },
+                { "StockOut", 0 },
+                { "Created", 0 },
+                { "Updated", 0 },
+                { "Deleted", 0 },
+                { "Total", histories.Count }
+            };
+
+            // Count by change type
+            foreach (var history in histories)
+            {
+                string changeType = history.ChangeType?.ToLower() ?? "";
+
+                if (changeType.Contains("stockin") || changeType.Contains("increase"))
+                {
+                    stats["StockIn"]++;
+                }
+                else if (changeType.Contains("stockout") || changeType.Contains("decrease"))
+                {
+                    stats["StockOut"]++;
+                }
+                else if (changeType.Contains("create"))
+                {
+                    stats["Created"]++;
+                }
+                else if (changeType.Contains("update"))
+                {
+                    stats["Updated"]++;
+                }
+                else if (changeType.Contains("delete"))
+                {
+                    stats["Deleted"]++;
+                }
+            }
+
+            return stats;
+        }
+
+        /// <summary>
+        /// Gets category distribution statistics
+        /// </summary>
+        /// <returns>List of categories with their item counts</returns>
+        public List<CategoryWithItemCount> GetCategoryDistribution()
+        {
+            // Just reuse the existing method for categories with item count
+            return GetCategoriesWithItemCount();
+        }
+
+        /// <summary>
+        /// Gets inventory movements grouped by date
+        /// </summary>
+        /// <param name="startDate">The start date of the range</param>
+        /// <param name="endDate">The end date of the range</param>
+        /// <param name="categoryId">Optional category ID filter</param>
+        /// <returns>Dictionary with dates and movement counts</returns>
+        public Dictionary<DateTime, int> GetInventoryMovementsByDate(DateTime startDate, DateTime endDate, int categoryId = 0)
+        {
+            // Get all item history
+            var allHistory = _itemRepository.GetItemHistory();
+
+            // Filter by date range
+            var filteredHistory = allHistory
+                .Where(h => h.ChangedDate >= startDate && h.ChangedDate <= endDate);
+
+            // Filter by category if specified
+            if (categoryId > 0)
+            {
+                // Get all items in the category
+                var categoryItems = _itemRepository.GetItemsByCategoryId(categoryId);
+                var categoryItemIds = categoryItems.Select(i => i.ItemID).ToList();
+
+                // Filter history to only items in the category
+                filteredHistory = filteredHistory.Where(h => categoryItemIds.Contains(h.ItemID));
+            }
+
+            // Group by date (truncate time component)
+            var result = filteredHistory
+                .GroupBy(h => h.ChangedDate.Date)
+                .ToDictionary(g => g.Key, g => g.Count());
+
+            // Ensure all dates in range are included
+            for (var date = startDate.Date; date <= endDate.Date; date = date.AddDays(1))
+            {
+                if (!result.ContainsKey(date))
+                {
+                    result[date] = 0;
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Gets AI recognition statistics
+        /// </summary>
+        /// <param name="startDate">The start date of the range</param>
+        /// <param name="endDate">The end date of the range</param>
+        /// <returns>Dictionary with AI recognition statistics</returns>
+        public Dictionary<string, int> GetAIRecognitionStats(DateTime startDate, DateTime endDate)
+        {
+            // Get all items created in the date range
+            var items = _itemRepository.GetAllItems()
+                .Where(i => i.CreatedDate >= startDate && i.CreatedDate <= endDate)
+                .ToList();
+
+            var stats = new Dictionary<string, int>
+            {
+                { "TotalItems", items.Count },
+                { "WithAITags", items.Count(i => !string.IsNullOrEmpty(i.AITags)) },
+                { "WithoutAITags", items.Count(i => string.IsNullOrEmpty(i.AITags)) },
+                { "WithImages", items.Count(i => !string.IsNullOrEmpty(i.ImagePath)) },
+                { "WithoutImages", items.Count(i => string.IsNullOrEmpty(i.ImagePath)) }
+            };
+
+            return stats;
+        }
+
+        /// <summary>
+        /// Gets item history for reporting with filtering
+        /// </summary>
+        /// <param name="startDate">The start date</param>
+        /// <param name="endDate">The end date</param>
+        /// <param name="categoryId">Optional category ID filter</param>
+        /// <param name="changeType">Optional change type filter</param>
+        /// <returns>A filtered list of item history records</returns>
+        public List<ItemHistory> GetItemHistoryForReporting(DateTime startDate, DateTime endDate, int categoryId = 0, string changeType = null)
+        {
+            // Get all item history
+            var allHistory = _itemRepository.GetItemHistory();
+
+            // Filter by date range
+            var filteredHistory = allHistory
+                .Where(h => h.ChangedDate >= startDate && h.ChangedDate <= endDate);
+
+            // Filter by category if specified
+            if (categoryId > 0)
+            {
+                // Get all items in the category
+                var categoryItems = _itemRepository.GetItemsByCategoryId(categoryId);
+                var categoryItemIds = categoryItems.Select(i => i.ItemID).ToList();
+
+                // Filter history to only items in the category
+                filteredHistory = filteredHistory.Where(h => categoryItemIds.Contains(h.ItemID));
+            }
+
+            // Filter by change type if specified
+            if (!string.IsNullOrEmpty(changeType))
+            {
+                filteredHistory = filteredHistory.Where(h =>
+                    h.ChangeType != null &&
+                    h.ChangeType.ToLower().Contains(changeType.ToLower()));
+            }
+
+            return filteredHistory.ToList();
+        }
+
+        #endregion
     }
 }

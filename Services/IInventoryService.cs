@@ -153,5 +153,50 @@ namespace Manajemen_Inventaris.Services
         List<ItemHistory> GetRecentItemHistory(int count);
 
         #endregion
+
+        #region Reports Operations
+
+        /// <summary>
+        /// Gets inventory movement statistics for a date range
+        /// </summary>
+        /// <param name="startDate">The start date of the range</param>
+        /// <param name="endDate">The end date of the range</param>
+        /// <returns>Dictionary with movement statistics</returns>
+        Dictionary<string, int> GetInventoryMovementStats(DateTime startDate, DateTime endDate);
+
+        /// <summary>
+        /// Gets category distribution statistics
+        /// </summary>
+        /// <returns>List of categories with their item counts</returns>
+        List<CategoryWithItemCount> GetCategoryDistribution();
+
+        /// <summary>
+        /// Gets inventory movements grouped by date
+        /// </summary>
+        /// <param name="startDate">The start date of the range</param>
+        /// <param name="endDate">The end date of the range</param>
+        /// <param name="categoryId">Optional category ID filter</param>
+        /// <returns>Dictionary with dates and movement counts</returns>
+        Dictionary<DateTime, int> GetInventoryMovementsByDate(DateTime startDate, DateTime endDate, int categoryId = 0);
+
+        /// <summary>
+        /// Gets AI recognition statistics
+        /// </summary>
+        /// <param name="startDate">The start date of the range</param>
+        /// <param name="endDate">The end date of the range</param>
+        /// <returns>Dictionary with AI recognition statistics</returns>
+        Dictionary<string, int> GetAIRecognitionStats(DateTime startDate, DateTime endDate);
+
+        /// <summary>
+        /// Gets item history for reporting with filtering
+        /// </summary>
+        /// <param name="startDate">The start date</param>
+        /// <param name="endDate">The end date</param>
+        /// <param name="categoryId">Optional category ID filter</param>
+        /// <param name="changeType">Optional change type filter</param>
+        /// <returns>A filtered list of item history records</returns>
+        List<ItemHistory> GetItemHistoryForReporting(DateTime startDate, DateTime endDate, int categoryId = 0, string changeType = null);
+
+        #endregion
     }
 }

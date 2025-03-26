@@ -332,6 +332,30 @@ namespace Manajemen_Inventaris.DataAccess
         }
 
         /// <summary>
+        /// Gets all item history records
+        /// </summary>
+        /// <returns>A list of all item history records</returns>
+        public List<ItemHistory> GetItemHistory()
+        {
+            string sql = @"
+                SELECT ih.*, i.Name AS ItemName, u.Username AS ChangedByUsername
+                FROM ItemHistory ih
+                INNER JOIN Items i ON ih.ItemID = i.ItemID
+                INNER JOIN Users u ON ih.ChangedBy = u.UserID
+                ORDER BY ih.ChangedDate DESC";
+
+            DataTable dataTable = _dataAccess.ExecuteQuery(sql);
+
+            List<ItemHistory> history = new List<ItemHistory>();
+            foreach (DataRow row in dataTable.Rows)
+            {
+                history.Add(MapRowToItemHistory(row));
+            }
+
+            return history;
+        }
+
+        /// <summary>
         /// Gets low stock items
         /// </summary>
         /// <param name="threshold">The low stock threshold</param>

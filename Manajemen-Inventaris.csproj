@@ -106,6 +106,8 @@
     <Content Include="Pages\Dashboard\Inventory\AddItem.aspx" />
     <Content Include="Pages\Dashboard\Inventory\EditItem.aspx" />
     <Content Include="Pages\Dashboard\Inventory\AdjustStock.aspx" />
+    <Content Include="Pages\Dashboard\Upload\Upload.aspx" />
+    <Content Include="Pages\Dashboard\Reports\Reports.aspx" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App_Start\RouteConfig.cs" />
@@ -205,6 +207,20 @@
     </Compile>
     <Compile Include="Pages\Dashboard\Inventory\AdjustStock.aspx.designer.cs">
       <DependentUpon>AdjustStock.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="Pages\Dashboard\Upload\Upload.aspx.cs">
+      <DependentUpon>Upload.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Pages\Dashboard\Upload\Upload.aspx.designer.cs">
+      <DependentUpon>Upload.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="Pages\Dashboard\Reports\Reports.aspx.cs">
+      <DependentUpon>Reports.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Pages\Dashboard\Reports\Reports.aspx.designer.cs">
+      <DependentUpon>Reports.aspx</DependentUpon>
     </Compile>
   </ItemGroup>
   <ItemGroup>

@@ -74,6 +74,12 @@ namespace Manajemen_Inventaris.DataAccess
         List<ItemHistory> GetItemHistory(int itemId);
 
         /// <summary>
+        /// Gets all item history records
+        /// </summary>
+        /// <returns>A list of all item history records</returns>
+        List<ItemHistory> GetItemHistory();
+
+        /// <summary>
         /// Adds a history record for an item
         /// </summary>
         /// <param name="history">The history record to add</param>
