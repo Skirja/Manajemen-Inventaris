@@ -9,6 +9,11 @@ using Manajemen_Inventaris.Models;
 using Manajemen_Inventaris.Services;
 using System.IO;
 using System.Web.UI.HtmlControls;
+using iTextSharp.text;
+using iTextSharp.text.pdf;
+using iTextSharp.text.html.simpleparser;
+using System.Globalization;
+using ClosedXML.Excel;
 
 namespace Manajemen_Inventaris.Pages.Dashboard.Reports
 {
@@ -59,7 +64,7 @@ namespace Manajemen_Inventaris.Pages.Dashboard.Reports
             var categories = _inventoryService.GetAllCategories();
             foreach (var category in categories)
             {
-                ddlCategory.Items.Add(new ListItem(category.Name, category.CategoryID.ToString()));
+                ddlCategory.Items.Add(new System.Web.UI.WebControls.ListItem(category.Name, category.CategoryID.ToString()));
             }
         }
 
@@ -242,6 +247,15 @@ namespace Manajemen_Inventaris.Pages.Dashboard.Reports
             // Get category distribution
             var categoryDistribution = _inventoryService.GetCategoryDistribution();
 
+            // Apply category filter if selected
+            if (_categoryId > 0)
+            {
+                // If a specific category is selected, only show that category
+                categoryDistribution = categoryDistribution
+                    .Where(c => c.CategoryID == _categoryId)
+                    .ToList();
+            }
+
             // Calculate total items for percentage
             int totalItems = categoryDistribution.Sum(c => c.ItemCount);
 
@@ -288,10 +302,22 @@ namespace Manajemen_Inventaris.Pages.Dashboard.Reports
                 }
             }
 
-            // Remove trailing commas and close arrays
-            if (categoryLabels.Length > 1) categoryLabels.Length--;
-            if (categoryData.Length > 1) categoryData.Length--;
-            if (categoryColors.Length > 1) categoryColors.Length--;
+            // Add placeholder data if no categories with items exist
+            if (categoryLabels.Length == 1)
+            {
+                categoryLabels.Append("'No Data'");
+                categoryData.Append("1");
+                categoryColors.Append("'rgba(209, 213, 219, 0.8)'"); // Gray color for no data
+            }
+            else
+            {
+                // Remove trailing commas
+                categoryLabels.Length--;
+                categoryData.Length--;
+                categoryColors.Length--;
+            }
+
+            // Close arrays
             categoryLabels.Append("]");
             categoryData.Append("]");
             categoryColors.Append("]");
@@ -316,6 +342,16 @@ namespace Manajemen_Inventaris.Pages.Dashboard.Reports
                                 plugins: {{
                                     legend: {{
                                         position: 'bottom',
+                                    }},
+                                    tooltip: {{
+                                        callbacks: {{
+                                            label: function(context) {{
+                                                if (context.label === 'No Data') {{
+                                                    return 'No data available for selected filters';
+                                                }}
+                                                return context.label + ': ' + context.raw;
+                                            }}
+                                        }}
                                     }}
                                 }}
                             }}
@@ -479,26 +515,1178 @@ namespace Manajemen_Inventaris.Pages.Dashboard.Reports
 
         protected void btnExportPDF_Click(object sender, EventArgs e)
         {
-            // In a real implementation, this would generate a PDF report
-            // For now, just create a simple alert
-            ScriptManager.RegisterStartupScript(this, GetType(), "alertMessage",
-                "alert('PDF export functionality would be implemented here.');", true);
+            try
+            {
+                // Create a new PDF document
+                Document document = new Document(PageSize.A4, 36, 36, 54, 36);
+
+                // Set the response content type and headers for PDF download
+                Response.ContentType = "application/pdf";
+                Response.AddHeader("content-disposition", $"attachment;filename=InventoryReport_{_startDate:yyyy-MM-dd}_to_{_endDate:yyyy-MM-dd}.pdf");
+                Response.Cache.SetCacheability(HttpCacheability.NoCache);
+
+                // Create a PdfWriter that writes to the output stream
+                PdfWriter writer = PdfWriter.GetInstance(document, Response.OutputStream);
+
+                // Open the document for writing
+                document.Open();
+
+                // Add document metadata
+                document.AddTitle("Inventory Management Report");
+                document.AddAuthor("Manajemen Inventaris System");
+                document.AddCreator("Manajemen Inventaris System");
+
+                // Add report title
+                iTextSharp.text.Font titleFont = new iTextSharp.text.Font(iTextSharp.text.Font.FontFamily.HELVETICA, 18, iTextSharp.text.Font.BOLD, new BaseColor(79, 70, 229));
+                Paragraph title = new Paragraph("Inventory Management Report", titleFont);
+                title.Alignment = Element.ALIGN_CENTER;
+                title.SpacingAfter = 10;
+                document.Add(title);
+
+                // Add date range and filter info
+                iTextSharp.text.Font subtitleFont = new iTextSharp.text.Font(iTextSharp.text.Font.FontFamily.HELVETICA, 12, iTextSharp.text.Font.NORMAL, BaseColor.DARK_GRAY);
+                Paragraph dateRange = new Paragraph($"Period: {_startDate:MMMM dd, yyyy} to {_endDate:MMMM dd, yyyy}", subtitleFont);
+                dateRange.Alignment = Element.ALIGN_CENTER;
+                document.Add(dateRange);
+
+                // Add category filter if specified
+                if (_categoryId > 0)
+                {
+                    string categoryName = ddlCategory.SelectedItem.Text;
+                    Paragraph categoryFilter = new Paragraph($"Category: {categoryName}", subtitleFont);
+                    categoryFilter.Alignment = Element.ALIGN_CENTER;
+                    categoryFilter.SpacingAfter = 20;
+                    document.Add(categoryFilter);
+                }
+                else
+                {
+                    Paragraph categoryFilter = new Paragraph("Category: All Categories", subtitleFont);
+                    categoryFilter.Alignment = Element.ALIGN_CENTER;
+                    categoryFilter.SpacingAfter = 20;
+                    document.Add(categoryFilter);
+                }
+
+                // Add dashboard overview section
+                iTextSharp.text.Font sectionTitleFont = new iTextSharp.text.Font(iTextSharp.text.Font.FontFamily.HELVETICA, 14, iTextSharp.text.Font.BOLD, new BaseColor(79, 70, 229));
+                Paragraph overviewTitle = new Paragraph("Dashboard Overview", sectionTitleFont);
+                overviewTitle.SpacingBefore = 15;
+                overviewTitle.SpacingAfter = 10;
+                document.Add(overviewTitle);
+
+                // Create a table for dashboard metrics
+                PdfPTable overviewTable = new PdfPTable(4);
+                overviewTable.WidthPercentage = 100;
+                overviewTable.SpacingAfter = 20;
+
+                // Add header cells
+                iTextSharp.text.Font headerFont = new iTextSharp.text.Font(iTextSharp.text.Font.FontFamily.HELVETICA, 10, iTextSharp.text.Font.BOLD, BaseColor.WHITE);
+
+                PdfPCell headerCell = new PdfPCell(new Phrase("Total Items", headerFont));
+                headerCell.BackgroundColor = new BaseColor(79, 70, 229);
+                headerCell.HorizontalAlignment = Element.ALIGN_CENTER;
+                headerCell.Padding = 5f;
+                overviewTable.AddCell(headerCell);
+
+                headerCell = new PdfPCell(new Phrase("Categories", headerFont));
+                headerCell.BackgroundColor = new BaseColor(16, 185, 129);
+                headerCell.HorizontalAlignment = Element.ALIGN_CENTER;
+                headerCell.Padding = 5f;
+                overviewTable.AddCell(headerCell);
+
+                headerCell = new PdfPCell(new Phrase("Total Stock", headerFont));
+                headerCell.BackgroundColor = new BaseColor(245, 158, 11);
+                headerCell.HorizontalAlignment = Element.ALIGN_CENTER;
+                headerCell.Padding = 5f;
+                overviewTable.AddCell(headerCell);
+
+                headerCell = new PdfPCell(new Phrase("Low Stock Items", headerFont));
+                headerCell.BackgroundColor = new BaseColor(239, 68, 68);
+                headerCell.HorizontalAlignment = Element.ALIGN_CENTER;
+                headerCell.Padding = 5f;
+                overviewTable.AddCell(headerCell);
+
+                // Add data cells
+                iTextSharp.text.Font dataFont = new iTextSharp.text.Font(iTextSharp.text.Font.FontFamily.HELVETICA, 12, iTextSharp.text.Font.NORMAL, BaseColor.DARK_GRAY);
+
+                PdfPCell dataCell = new PdfPCell(new Phrase(lblTotalItems.Text, dataFont));
+                dataCell.HorizontalAlignment = Element.ALIGN_CENTER;
+                dataCell.Padding = 5f;
+                overviewTable.AddCell(dataCell);
+
+                dataCell = new PdfPCell(new Phrase(lblTotalCategories.Text, dataFont));
+                dataCell.HorizontalAlignment = Element.ALIGN_CENTER;
+                dataCell.Padding = 5f;
+                overviewTable.AddCell(dataCell);
+
+                dataCell = new PdfPCell(new Phrase(lblTotalStock.Text, dataFont));
+                dataCell.HorizontalAlignment = Element.ALIGN_CENTER;
+                dataCell.Padding = 5f;
+                overviewTable.AddCell(dataCell);
+
+                dataCell = new PdfPCell(new Phrase(lblLowStock.Text, dataFont));
+                dataCell.HorizontalAlignment = Element.ALIGN_CENTER;
+                dataCell.Padding = 5f;
+                overviewTable.AddCell(dataCell);
+
+                document.Add(overviewTable);
+
+                // Add movement report section
+                Paragraph movementTitle = new Paragraph("Inventory Movement Report", sectionTitleFont);
+                movementTitle.SpacingBefore = 15;
+                movementTitle.SpacingAfter = 10;
+                document.Add(movementTitle);
+
+                // Get movement statistics and generate table
+                var movementStats = _inventoryService.GetInventoryMovementStats(_startDate, _endDate);
+
+                PdfPTable movementTable = new PdfPTable(5);
+                movementTable.WidthPercentage = 100;
+                movementTable.SpacingAfter = 20;
+
+                // Add header row
+                movementTable.AddCell(CreateHeaderCell("Stock In", new BaseColor(79, 70, 229)));
+                movementTable.AddCell(CreateHeaderCell("Stock Out", new BaseColor(239, 68, 68)));
+                movementTable.AddCell(CreateHeaderCell("Created", new BaseColor(16, 185, 129)));
+                movementTable.AddCell(CreateHeaderCell("Updated", new BaseColor(59, 130, 246)));
+                movementTable.AddCell(CreateHeaderCell("Deleted", new BaseColor(245, 158, 11)));
+
+                // Add data row
+                movementTable.AddCell(CreateDataCell(movementStats["StockIn"].ToString()));
+                movementTable.AddCell(CreateDataCell(movementStats["StockOut"].ToString()));
+                movementTable.AddCell(CreateDataCell(movementStats["Created"].ToString()));
+                movementTable.AddCell(CreateDataCell(movementStats["Updated"].ToString()));
+                movementTable.AddCell(CreateDataCell(movementStats["Deleted"].ToString()));
+
+                document.Add(movementTable);
+
+                // Add movement details
+                iTextSharp.text.Font subheaderFont = new iTextSharp.text.Font(iTextSharp.text.Font.FontFamily.HELVETICA, 12, iTextSharp.text.Font.BOLD, BaseColor.DARK_GRAY);
+                Paragraph detailsTitle = new Paragraph("Movement Details", subheaderFont);
+                detailsTitle.SpacingBefore = 10;
+                detailsTitle.SpacingAfter = 10;
+                document.Add(detailsTitle);
+
+                // Get movement details
+                var movementDetails = _inventoryService.GetItemHistoryForReporting(_startDate, _endDate, _categoryId);
+
+                if (movementDetails.Count > 0)
+                {
+                    // Create table for movement details
+                    PdfPTable detailsTable = new PdfPTable(6);
+                    detailsTable.WidthPercentage = 100;
+                    detailsTable.SpacingAfter = 20;
+
+                    // Set column widths
+                    float[] widths = new float[] { 2f, 1.5f, 2f, 1f, 2.5f, 1.5f };
+                    detailsTable.SetWidths(widths);
+
+                    // Add header row
+                    detailsTable.AddCell(CreateStandardHeaderCell("Date"));
+                    detailsTable.AddCell(CreateStandardHeaderCell("Action"));
+                    detailsTable.AddCell(CreateStandardHeaderCell("Item"));
+                    detailsTable.AddCell(CreateStandardHeaderCell("Quantity"));
+                    detailsTable.AddCell(CreateStandardHeaderCell("Notes"));
+                    detailsTable.AddCell(CreateStandardHeaderCell("User"));
+
+                    // Add data rows
+                    iTextSharp.text.Font detailsRowFont = new iTextSharp.text.Font(iTextSharp.text.Font.FontFamily.HELVETICA, 8, iTextSharp.text.Font.NORMAL, BaseColor.DARK_GRAY);
+                    bool alternateRow = false;
+
+                    foreach (var item in movementDetails)
+                    {
+                        BaseColor rowColor = alternateRow ? new BaseColor(249, 250, 251) : BaseColor.WHITE;
+                        alternateRow = !alternateRow;
+
+                        detailsTable.AddCell(CreateDetailCell(item.ChangedDate.ToString("yyyy-MM-dd HH:mm"), detailsRowFont, rowColor));
+                        detailsTable.AddCell(CreateDetailCell(GetActionTypeDisplay(item.ChangeType), detailsRowFont, rowColor));
+                        detailsTable.AddCell(CreateDetailCell(item.ItemName, detailsRowFont, rowColor));
+                        detailsTable.AddCell(CreateDetailCell(FormatQuantityChange(item.ChangeType, item.QuantityChanged), detailsRowFont, rowColor));
+                        detailsTable.AddCell(CreateDetailCell(item.Notes ?? "", detailsRowFont, rowColor));
+                        detailsTable.AddCell(CreateDetailCell(item.ChangedByUsername, detailsRowFont, rowColor));
+                    }
+
+                    document.Add(detailsTable);
+                }
+                else
+                {
+                    iTextSharp.text.Font italicFont = new iTextSharp.text.Font(iTextSharp.text.Font.FontFamily.HELVETICA, 10, iTextSharp.text.Font.ITALIC, BaseColor.GRAY);
+                    Paragraph noData = new Paragraph("No movement data found for the selected period.", italicFont);
+                    noData.Alignment = Element.ALIGN_CENTER;
+                    noData.SpacingAfter = 20;
+                    document.Add(noData);
+                }
+
+                // Add page break before category analysis
+                document.NewPage();
+
+                // Add category analysis section
+                Paragraph categoryTitle = new Paragraph("Category Analysis", sectionTitleFont);
+                categoryTitle.SpacingBefore = 15;
+                categoryTitle.SpacingAfter = 10;
+                document.Add(categoryTitle);
+
+                // Get category distribution
+                var categoryDistribution = _inventoryService.GetCategoryDistribution();
+
+                // Apply category filter if selected
+                if (_categoryId > 0)
+                {
+                    categoryDistribution = categoryDistribution
+                        .Where(c => c.CategoryID == _categoryId)
+                        .ToList();
+                }
+
+                // Calculate total items for percentage
+                int totalItems = categoryDistribution.Sum(c => c.ItemCount);
+
+                if (categoryDistribution.Count > 0 && totalItems > 0)
+                {
+                    // Create table for category details
+                    PdfPTable categoryTable = new PdfPTable(3);
+                    categoryTable.WidthPercentage = 100;
+                    categoryTable.SpacingAfter = 20;
+
+                    // Set column widths
+                    float[] catWidths = new float[] { 2f, 1f, 1f };
+                    categoryTable.SetWidths(catWidths);
+
+                    // Add header row
+                    categoryTable.AddCell(CreateStandardHeaderCell("Category"));
+                    categoryTable.AddCell(CreateStandardHeaderCell("Items"));
+                    categoryTable.AddCell(CreateStandardHeaderCell("Percentage"));
+
+                    // Add data rows
+                    iTextSharp.text.Font categoryRowFont = new iTextSharp.text.Font(iTextSharp.text.Font.FontFamily.HELVETICA, 10, iTextSharp.text.Font.NORMAL, BaseColor.DARK_GRAY);
+                    bool alternateRow = false;
+
+                    foreach (var category in categoryDistribution)
+                    {
+                        BaseColor rowColor = alternateRow ? new BaseColor(249, 250, 251) : BaseColor.WHITE;
+                        alternateRow = !alternateRow;
+
+                        double percentage = (double)category.ItemCount / totalItems;
+
+                        categoryTable.AddCell(CreateDetailCell(category.Name, categoryRowFont, rowColor));
+                        categoryTable.AddCell(CreateDetailCell(category.ItemCount.ToString(), categoryRowFont, rowColor, Element.ALIGN_CENTER));
+                        categoryTable.AddCell(CreateDetailCell(string.Format("{0:P1}", percentage), categoryRowFont, rowColor, Element.ALIGN_CENTER));
+                    }
+
+                    document.Add(categoryTable);
+                }
+                else
+                {
+                    iTextSharp.text.Font italicFont = new iTextSharp.text.Font(iTextSharp.text.Font.FontFamily.HELVETICA, 10, iTextSharp.text.Font.ITALIC, BaseColor.GRAY);
+                    Paragraph noData = new Paragraph("No category data found for the selected filters.", italicFont);
+                    noData.Alignment = Element.ALIGN_CENTER;
+                    noData.SpacingAfter = 20;
+                    document.Add(noData);
+                }
+
+                // Add AI statistics section
+                Paragraph aiTitle = new Paragraph("AI Recognition Statistics", sectionTitleFont);
+                aiTitle.SpacingBefore = 15;
+                aiTitle.SpacingAfter = 10;
+                document.Add(aiTitle);
+
+                // Get AI stats
+                var aiStats = _inventoryService.GetAIRecognitionStats(_startDate, _endDate);
+
+                // Add AI Tags Usage subsection
+                Paragraph tagsTitle = new Paragraph("AI Tags Usage", subheaderFont);
+                tagsTitle.SpacingBefore = 10;
+                tagsTitle.SpacingAfter = 5;
+                document.Add(tagsTitle);
+
+                PdfPTable tagsTable = new PdfPTable(2);
+                tagsTable.WidthPercentage = 70;
+                tagsTable.HorizontalAlignment = Element.ALIGN_CENTER;
+                tagsTable.SpacingAfter = 20;
+
+                // Add header
+                tagsTable.AddCell(CreateCustomHeaderCell("Status", new BaseColor(79, 70, 229)));
+                tagsTable.AddCell(CreateCustomHeaderCell("Count", new BaseColor(79, 70, 229)));
+
+                // Add data rows
+                iTextSharp.text.Font aiRowFont = new iTextSharp.text.Font(iTextSharp.text.Font.FontFamily.HELVETICA, 10, iTextSharp.text.Font.NORMAL, BaseColor.DARK_GRAY);
+
+                tagsTable.AddCell(CreateDetailCell("Items with AI Tags", aiRowFont, BaseColor.WHITE));
+                tagsTable.AddCell(CreateDetailCell(aiStats["WithAITags"].ToString(), aiRowFont, BaseColor.WHITE, Element.ALIGN_CENTER));
+
+                tagsTable.AddCell(CreateDetailCell("Items without AI Tags", aiRowFont, BaseColor.WHITE));
+                tagsTable.AddCell(CreateDetailCell(aiStats["WithoutAITags"].ToString(), aiRowFont, BaseColor.WHITE, Element.ALIGN_CENTER));
+
+                document.Add(tagsTable);
+
+                // Add Image Usage subsection
+                Paragraph imageTitle = new Paragraph("Image Usage", subheaderFont);
+                imageTitle.SpacingBefore = 10;
+                imageTitle.SpacingAfter = 5;
+                document.Add(imageTitle);
+
+                PdfPTable imageTable = new PdfPTable(2);
+                imageTable.WidthPercentage = 70;
+                imageTable.HorizontalAlignment = Element.ALIGN_CENTER;
+                imageTable.SpacingAfter = 20;
+
+                // Add header
+                imageTable.AddCell(CreateCustomHeaderCell("Status", new BaseColor(16, 185, 129)));
+                imageTable.AddCell(CreateCustomHeaderCell("Count", new BaseColor(16, 185, 129)));
+
+                // Add data rows
+                imageTable.AddCell(CreateDetailCell("Items with Images", aiRowFont, BaseColor.WHITE));
+                imageTable.AddCell(CreateDetailCell(aiStats["WithImages"].ToString(), aiRowFont, BaseColor.WHITE, Element.ALIGN_CENTER));
+
+                imageTable.AddCell(CreateDetailCell("Items without Images", aiRowFont, BaseColor.WHITE));
+                imageTable.AddCell(CreateDetailCell(aiStats["WithoutImages"].ToString(), aiRowFont, BaseColor.WHITE, Element.ALIGN_CENTER));
+
+                document.Add(imageTable);
+
+                // Add footer
+                iTextSharp.text.Font footerFont = new iTextSharp.text.Font(iTextSharp.text.Font.FontFamily.HELVETICA, 8, iTextSharp.text.Font.ITALIC, BaseColor.GRAY);
+                Paragraph footer = new Paragraph("Generated on " + DateTime.Now.ToString("MMMM dd, yyyy HH:mm:ss"), footerFont);
+                footer.Alignment = Element.ALIGN_CENTER;
+                footer.SpacingBefore = 30;
+                document.Add(footer);
+
+                // Close the document
+                document.Close();
+
+                // End the response to prevent other content from being written
+                Response.End();
+            }
+            catch (Exception ex)
+            {
+                ScriptManager.RegisterStartupScript(this, GetType(), "alertMessage",
+                    $"alert('Error exporting to PDF: {ex.Message}');", true);
+                System.Diagnostics.Debug.WriteLine($"PDF Export Error: {ex.Message}");
+            }
+        }
+
+        private PdfPCell CreateHeaderCell(string text, BaseColor backgroundColor)
+        {
+            iTextSharp.text.Font headerFont = new iTextSharp.text.Font(iTextSharp.text.Font.FontFamily.HELVETICA, 10, iTextSharp.text.Font.BOLD, BaseColor.WHITE);
+            PdfPCell cell = new PdfPCell(new Phrase(text, headerFont));
+            cell.BackgroundColor = backgroundColor;
+            cell.HorizontalAlignment = Element.ALIGN_CENTER;
+            cell.VerticalAlignment = Element.ALIGN_MIDDLE;
+            cell.Padding = 5f;
+            cell.BorderColor = BaseColor.WHITE;
+            cell.BorderWidth = 1f;
+            return cell;
+        }
+
+        private PdfPCell CreateStandardHeaderCell(string text)
+        {
+            iTextSharp.text.Font headerFont = new iTextSharp.text.Font(iTextSharp.text.Font.FontFamily.HELVETICA, 10, iTextSharp.text.Font.BOLD, BaseColor.WHITE);
+            PdfPCell cell = new PdfPCell(new Phrase(text, headerFont));
+            cell.BackgroundColor = new BaseColor(79, 70, 229);
+            cell.HorizontalAlignment = Element.ALIGN_LEFT;
+            cell.VerticalAlignment = Element.ALIGN_MIDDLE;
+            cell.Padding = 5f;
+            cell.BorderColor = BaseColor.WHITE;
+            cell.BorderWidth = 0.5f;
+            return cell;
+        }
+
+        private PdfPCell CreateCustomHeaderCell(string text, BaseColor backgroundColor)
+        {
+            iTextSharp.text.Font headerFont = new iTextSharp.text.Font(iTextSharp.text.Font.FontFamily.HELVETICA, 10, iTextSharp.text.Font.BOLD, BaseColor.WHITE);
+            PdfPCell cell = new PdfPCell(new Phrase(text, headerFont));
+            cell.BackgroundColor = backgroundColor;
+            cell.HorizontalAlignment = Element.ALIGN_LEFT;
+            cell.VerticalAlignment = Element.ALIGN_MIDDLE;
+            cell.Padding = 5f;
+            cell.BorderColor = BaseColor.WHITE;
+            cell.BorderWidth = 0.5f;
+            return cell;
+        }
+
+        private PdfPCell CreateDataCell(string text)
+        {
+            iTextSharp.text.Font cellFont = new iTextSharp.text.Font(iTextSharp.text.Font.FontFamily.HELVETICA, 12, iTextSharp.text.Font.NORMAL, BaseColor.DARK_GRAY);
+            PdfPCell cell = new PdfPCell(new Phrase(text, cellFont));
+            cell.HorizontalAlignment = Element.ALIGN_CENTER;
+            cell.VerticalAlignment = Element.ALIGN_MIDDLE;
+            cell.Padding = 5f;
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            cell.BorderWidth = 0.5f;
+            return cell;
+        }
+
+        private PdfPCell CreateDetailCell(string text, iTextSharp.text.Font font, BaseColor backgroundColor, int alignment = Element.ALIGN_LEFT)
+        {
+            PdfPCell cell = new PdfPCell(new Phrase(text, font));
+            cell.BackgroundColor = backgroundColor;
+            cell.HorizontalAlignment = alignment;
+            cell.VerticalAlignment = Element.ALIGN_MIDDLE;
+            cell.Padding = 5f;
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            cell.BorderWidth = 0.5f;
+            return cell;
         }
 
         protected void btnExportExcel_Click(object sender, EventArgs e)
         {
-            // In a real implementation, this would generate an Excel report
-            // For now, just create a simple alert
-            ScriptManager.RegisterStartupScript(this, GetType(), "alertMessage",
-                "alert('Excel export functionality would be implemented here.');", true);
+            try
+            {
+                // Create a new Excel workbook
+                using (var workbook = new XLWorkbook())
+                {
+                    // Add worksheets for each section
+                    var overviewSheet = workbook.Worksheets.Add("Dashboard Overview");
+                    var movementSheet = workbook.Worksheets.Add("Inventory Movement");
+                    var categorySheet = workbook.Worksheets.Add("Category Analysis");
+                    var aiStatsSheet = workbook.Worksheets.Add("AI Recognition");
+
+                    // Add report title and metadata to each worksheet
+                    AddReportHeaderToWorksheet(overviewSheet);
+                    AddReportHeaderToWorksheet(movementSheet);
+                    AddReportHeaderToWorksheet(categorySheet);
+                    AddReportHeaderToWorksheet(aiStatsSheet);
+
+                    // Generate Dashboard Overview sheet
+                    GenerateOverviewSection(overviewSheet);
+
+                    // Generate Inventory Movement sheet
+                    GenerateMovementSection(movementSheet);
+
+                    // Generate Category Analysis sheet
+                    GenerateCategorySection(categorySheet);
+
+                    // Generate AI Recognition Stats sheet
+                    GenerateAIStatsSection(aiStatsSheet);
+
+                    // Auto-fit columns for better readability
+                    foreach (var worksheet in workbook.Worksheets)
+                    {
+                        worksheet.Columns().AdjustToContents();
+                    }
+
+                    // Set content type and headers for Excel download
+                    Response.Clear();
+                    Response.ContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+                    Response.AddHeader("content-disposition", $"attachment;filename=InventoryReport_{_startDate:yyyy-MM-dd}_to_{_endDate:yyyy-MM-dd}.xlsx");
+                    
+                    // Save the workbook to the response stream
+                    using (MemoryStream memoryStream = new MemoryStream())
+                    {
+                        workbook.SaveAs(memoryStream);
+                        memoryStream.WriteTo(Response.OutputStream);
+                    }
+                    
+                    Response.End();
+                }
+            }
+            catch (Exception ex)
+            {
+                ScriptManager.RegisterStartupScript(this, GetType(), "alertMessage",
+                    $"alert('Error exporting to Excel: {ex.Message}');", true);
+                System.Diagnostics.Debug.WriteLine($"Excel Export Error: {ex.Message}");
+            }
+        }
+
+        private void AddReportHeaderToWorksheet(IXLWorksheet worksheet)
+        {
+            // Add report title
+            worksheet.Cell("A1").Value = "Inventory Management Report";
+            worksheet.Cell("A1").Style
+                .Font.SetBold(true)
+                .Font.SetFontSize(16)
+                .Font.SetFontColor(XLColor.FromHtml("#4F46E5"))
+                .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+            worksheet.Range("A1:H1").Merge();
+
+            // Add date range
+            worksheet.Cell("A2").Value = $"Period: {_startDate:MMMM dd, yyyy} to {_endDate:MMMM dd, yyyy}";
+            worksheet.Cell("A2").Style
+                .Font.SetFontSize(12)
+                .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+            worksheet.Range("A2:H2").Merge();
+
+            // Add category filter
+            string categoryText = _categoryId > 0 ? ddlCategory.SelectedItem.Text : "All Categories";
+            worksheet.Cell("A3").Value = $"Category: {categoryText}";
+            worksheet.Cell("A3").Style
+                .Font.SetFontSize(12)
+                .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+            worksheet.Range("A3:H3").Merge();
+
+            // Add empty row for spacing
+            worksheet.Cell("A4").Value = "";
+        }
+
+        private void GenerateOverviewSection(IXLWorksheet worksheet)
+        {
+            // Add section title
+            worksheet.Cell("A5").Value = "Dashboard Overview";
+            worksheet.Cell("A5").Style
+                .Font.SetBold(true)
+                .Font.SetFontColor(XLColor.FromHtml("#4F46E5"))
+                .Font.SetFontSize(14);
+            worksheet.Range("A5:D5").Merge();
+
+            // Add header row for metrics
+            var headerRow = worksheet.Row(6);
+            headerRow.Style
+                .Font.SetBold(true)
+                .Font.SetFontColor(XLColor.White)
+                .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+
+            worksheet.Cell("A6").Value = "Total Items";
+            worksheet.Cell("A6").Style.Fill.SetBackgroundColor(XLColor.FromHtml("#4F46E5"));
+
+            worksheet.Cell("B6").Value = "Categories";
+            worksheet.Cell("B6").Style.Fill.SetBackgroundColor(XLColor.FromHtml("#10B981"));
+
+            worksheet.Cell("C6").Value = "Total Stock";
+            worksheet.Cell("C6").Style.Fill.SetBackgroundColor(XLColor.FromHtml("#F59E0B"));
+
+            worksheet.Cell("D6").Value = "Low Stock Items";
+            worksheet.Cell("D6").Style.Fill.SetBackgroundColor(XLColor.FromHtml("#EF4444"));
+
+            // Add data row
+            worksheet.Cell("A7").Value = lblTotalItems.Text;
+            worksheet.Cell("B7").Value = lblTotalCategories.Text;
+            worksheet.Cell("C7").Value = lblTotalStock.Text;
+            worksheet.Cell("D7").Value = lblLowStock.Text;
+
+            // Style data row
+            worksheet.Range("A7:D7").Style
+                .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center)
+                .Border.SetOutsideBorder(XLBorderStyleValues.Thin)
+                .Border.SetOutsideBorderColor(XLColor.Gray);
+        }
+
+        private void GenerateMovementSection(IXLWorksheet worksheet)
+        {
+            // Add section title
+            worksheet.Cell("A6").Value = "Inventory Movement Summary";
+            worksheet.Cell("A6").Style
+                .Font.SetBold(true)
+                .Font.SetFontColor(XLColor.FromHtml("#4F46E5"))
+                .Font.SetFontSize(14);
+
+            // Get movement statistics
+            var movementStats = _inventoryService.GetInventoryMovementStats(_startDate, _endDate);
+
+            // Add header row for movement summary
+            var headerRow = worksheet.Row(7);
+            headerRow.Style
+                .Font.SetBold(true)
+                .Font.SetFontColor(XLColor.White)
+                .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+
+            worksheet.Cell("A7").Value = "Stock In";
+            worksheet.Cell("A7").Style.Fill.SetBackgroundColor(XLColor.FromHtml("#4F46E5"));
+
+            worksheet.Cell("B7").Value = "Stock Out";
+            worksheet.Cell("B7").Style.Fill.SetBackgroundColor(XLColor.FromHtml("#EF4444"));
+
+            worksheet.Cell("C7").Value = "Created";
+            worksheet.Cell("C7").Style.Fill.SetBackgroundColor(XLColor.FromHtml("#10B981"));
+
+            worksheet.Cell("D7").Value = "Updated";
+            worksheet.Cell("D7").Style.Fill.SetBackgroundColor(XLColor.FromHtml("#3B82F6"));
+
+            worksheet.Cell("E7").Value = "Deleted";
+            worksheet.Cell("E7").Style.Fill.SetBackgroundColor(XLColor.FromHtml("#F59E0B"));
+
+            // Add data row
+            worksheet.Cell("A8").Value = movementStats["StockIn"];
+            worksheet.Cell("B8").Value = movementStats["StockOut"];
+            worksheet.Cell("C8").Value = movementStats["Created"];
+            worksheet.Cell("D8").Value = movementStats["Updated"];
+            worksheet.Cell("E8").Value = movementStats["Deleted"];
+
+            // Style data row
+            worksheet.Range("A8:E8").Style
+                .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center)
+                .Border.SetOutsideBorder(XLBorderStyleValues.Thin)
+                .Border.SetOutsideBorderColor(XLColor.Gray);
+
+            // Add Movement Details section
+            worksheet.Cell("A10").Value = "Movement Details";
+            worksheet.Cell("A10").Style
+                .Font.SetBold(true)
+                .Font.SetFontColor(XLColor.FromHtml("#4F46E5"))
+                .Font.SetFontSize(14);
+
+            // Get movement details
+            var movementDetails = _inventoryService.GetItemHistoryForReporting(_startDate, _endDate, _categoryId);
+
+            // If there are movement details, create a table
+            if (movementDetails.Count > 0)
+            {
+                // Add header row for details table
+                var detailsHeaderRow = worksheet.Row(11);
+                detailsHeaderRow.Style
+                    .Font.SetBold(true)
+                    .Font.SetFontColor(XLColor.White)
+                    .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+
+                worksheet.Cell("A11").Value = "Date";
+                worksheet.Cell("B11").Value = "Action";
+                worksheet.Cell("C11").Value = "Item";
+                worksheet.Cell("D11").Value = "Quantity";
+                worksheet.Cell("E11").Value = "Notes";
+                worksheet.Cell("F11").Value = "User";
+
+                // Style header row
+                worksheet.Range("A11:F11").Style
+                    .Fill.SetBackgroundColor(XLColor.FromHtml("#4F46E5"));
+
+                // Add data rows
+                int rowIndex = 12;
+                bool alternateRow = false;
+
+                foreach (var item in movementDetails)
+                {
+                    worksheet.Cell($"A{rowIndex}").Value = item.ChangedDate.ToString("yyyy-MM-dd HH:mm");
+                    worksheet.Cell($"B{rowIndex}").Value = GetActionTypeDisplay(item.ChangeType);
+                    worksheet.Cell($"C{rowIndex}").Value = item.ItemName;
+                    worksheet.Cell($"D{rowIndex}").Value = FormatQuantityChange(item.ChangeType, item.QuantityChanged);
+                    worksheet.Cell($"E{rowIndex}").Value = item.Notes ?? "";
+                    worksheet.Cell($"F{rowIndex}").Value = item.ChangedByUsername;
+
+                    // Apply alternating row styling
+                    if (alternateRow)
+                    {
+                        worksheet.Range($"A{rowIndex}:F{rowIndex}").Style
+                            .Fill.SetBackgroundColor(XLColor.FromHtml("#F9FAFB"));
+                    }
+
+                    // Style based on action type
+                    XLColor actionColor = XLColor.Black;
+                    switch (item.ChangeType?.ToLower())
+                    {
+                        case "create":
+                        case "created":
+                            actionColor = XLColor.FromHtml("#10B981"); // Green
+                            break;
+                        case "update":
+                        case "updated":
+                            actionColor = XLColor.FromHtml("#3B82F6"); // Blue
+                            break;
+                        case "delete":
+                        case "deleted":
+                            actionColor = XLColor.FromHtml("#EF4444"); // Red
+                            break;
+                        case "stockin":
+                        case "adjust_increase":
+                            actionColor = XLColor.FromHtml("#4F46E5"); // Indigo
+                            break;
+                        case "stockout":
+                        case "adjust_decrease":
+                            actionColor = XLColor.FromHtml("#F59E0B"); // Yellow
+                            break;
+                    }
+
+                    worksheet.Cell($"B{rowIndex}").Style.Font.SetFontColor(actionColor);
+
+                    rowIndex++;
+                    alternateRow = !alternateRow;
+                }
+
+                // Create Excel table for filtering
+                var table = worksheet.Range($"A11:F{rowIndex - 1}").CreateTable("MovementDetailsTable");
+                table.Theme = XLTableTheme.TableStyleMedium2;
+            }
+            else
+            {
+                // No data message
+                worksheet.Cell("A11").Value = "No movement data found for the selected period.";
+                worksheet.Cell("A11").Style
+                    .Font.SetItalic(true)
+                    .Font.SetFontColor(XLColor.Gray)
+                    .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+                worksheet.Range("A11:F11").Merge();
+            }
+        }
+
+        private void GenerateCategorySection(IXLWorksheet worksheet)
+        {
+            // Add section title
+            worksheet.Cell("A6").Value = "Category Analysis";
+            worksheet.Cell("A6").Style
+                .Font.SetBold(true)
+                .Font.SetFontColor(XLColor.FromHtml("#4F46E5"))
+                .Font.SetFontSize(14);
+
+            // Get category distribution
+            var categoryDistribution = _inventoryService.GetCategoryDistribution();
+
+            // Apply category filter if selected
+            if (_categoryId > 0)
+            {
+                categoryDistribution = categoryDistribution
+                    .Where(c => c.CategoryID == _categoryId)
+                    .ToList();
+            }
+
+            // Calculate total items for percentage
+            int totalItems = categoryDistribution.Sum(c => c.ItemCount);
+
+            if (categoryDistribution.Count > 0 && totalItems > 0)
+            {
+                // Add header row for category table
+                var headerRow = worksheet.Row(7);
+                headerRow.Style
+                    .Font.SetBold(true)
+                    .Font.SetFontColor(XLColor.White)
+                    .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+
+                worksheet.Cell("A7").Value = "Category";
+                worksheet.Cell("B7").Value = "Items";
+                worksheet.Cell("C7").Value = "Percentage";
+
+                // Style header row
+                worksheet.Range("A7:C7").Style
+                    .Fill.SetBackgroundColor(XLColor.FromHtml("#4F46E5"));
+
+                // Add data rows
+                int rowIndex = 8;
+                bool alternateRow = false;
+
+                foreach (var category in categoryDistribution)
+                {
+                    double percentage = (double)category.ItemCount / totalItems;
+
+                    worksheet.Cell($"A{rowIndex}").Value = category.Name;
+                    worksheet.Cell($"B{rowIndex}").Value = category.ItemCount;
+                    worksheet.Cell($"C{rowIndex}").Value = percentage;
+                    worksheet.Cell($"C{rowIndex}").Style.NumberFormat.Format = "0.0%";
+
+                    // Apply alternating row styling
+                    if (alternateRow)
+                    {
+                        worksheet.Range($"A{rowIndex}:C{rowIndex}").Style
+                            .Fill.SetBackgroundColor(XLColor.FromHtml("#F9FAFB"));
+                    }
+
+                    rowIndex++;
+                    alternateRow = !alternateRow;
+                }
+
+                // Create Excel table for filtering
+                var table = worksheet.Range($"A7:C{rowIndex - 1}").CreateTable("CategoryTable");
+                table.Theme = XLTableTheme.TableStyleMedium2;
+
+                // Add total row
+                worksheet.Cell($"A{rowIndex}").Value = "TOTAL";
+                worksheet.Cell($"A{rowIndex}").Style.Font.SetBold(true);
+                worksheet.Cell($"B{rowIndex}").Value = totalItems;
+                worksheet.Cell($"B{rowIndex}").Style.Font.SetBold(true);
+                worksheet.Cell($"C{rowIndex}").Value = 1.0;
+                worksheet.Cell($"C{rowIndex}").Style
+                    .Font.SetBold(true)
+                    .NumberFormat.Format = "0.0%";
+            }
+            else
+            {
+                // No data message
+                worksheet.Cell("A7").Value = "No category data found for the selected filters.";
+                worksheet.Cell("A7").Style
+                    .Font.SetItalic(true)
+                    .Font.SetFontColor(XLColor.Gray)
+                    .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+                worksheet.Range("A7:C7").Merge();
+            }
+        }
+
+        private void GenerateAIStatsSection(IXLWorksheet worksheet)
+        {
+            // Add section title
+            worksheet.Cell("A6").Value = "AI Recognition Statistics";
+            worksheet.Cell("A6").Style
+                .Font.SetBold(true)
+                .Font.SetFontColor(XLColor.FromHtml("#4F46E5"))
+                .Font.SetFontSize(14);
+
+            // Get AI stats
+            var aiStats = _inventoryService.GetAIRecognitionStats(_startDate, _endDate);
+
+            // AI Tags Usage subsection
+            worksheet.Cell("A8").Value = "AI Tags Usage";
+            worksheet.Cell("A8").Style
+                .Font.SetBold(true)
+                .Font.SetFontColor(XLColor.FromHtml("#4F46E5"));
+
+            // Add header row for tags table
+            worksheet.Cell("A9").Value = "Status";
+            worksheet.Cell("B9").Value = "Count";
+            worksheet.Range("A9:B9").Style
+                .Font.SetBold(true)
+                .Font.SetFontColor(XLColor.White)
+                .Fill.SetBackgroundColor(XLColor.FromHtml("#4F46E5"))
+                .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+
+            // Add data rows for tags
+            worksheet.Cell("A10").Value = "Items with AI Tags";
+            worksheet.Cell("B10").Value = aiStats["WithAITags"];
+            worksheet.Cell("A11").Value = "Items without AI Tags";
+            worksheet.Cell("B11").Value = aiStats["WithoutAITags"];
+
+            // Style data rows
+            worksheet.Range("A10:B11").Style
+                .Border.SetOutsideBorder(XLBorderStyleValues.Thin)
+                .Border.SetOutsideBorderColor(XLColor.Gray);
+            worksheet.Range("B10:B11").Style
+                .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+
+            // Image Usage subsection
+            worksheet.Cell("A13").Value = "Image Usage";
+            worksheet.Cell("A13").Style
+                .Font.SetBold(true)
+                .Font.SetFontColor(XLColor.FromHtml("#10B981"));
+
+            // Add header row for image table
+            worksheet.Cell("A14").Value = "Status";
+            worksheet.Cell("B14").Value = "Count";
+            worksheet.Range("A14:B14").Style
+                .Font.SetBold(true)
+                .Font.SetFontColor(XLColor.White)
+                .Fill.SetBackgroundColor(XLColor.FromHtml("#10B981"))
+                .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+
+            // Add data rows for image usage
+            worksheet.Cell("A15").Value = "Items with Images";
+            worksheet.Cell("B15").Value = aiStats["WithImages"];
+            worksheet.Cell("A16").Value = "Items without Images";
+            worksheet.Cell("B16").Value = aiStats["WithoutImages"];
+
+            // Style data rows
+            worksheet.Range("A15:B16").Style
+                .Border.SetOutsideBorder(XLBorderStyleValues.Thin)
+                .Border.SetOutsideBorderColor(XLColor.Gray);
+            worksheet.Range("B15:B16").Style
+                .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+
+            // Add timestamp
+            worksheet.Cell("A18").Value = $"Generated on {DateTime.Now:MMMM dd, yyyy HH:mm:ss}";
+            worksheet.Cell("A18").Style
+                .Font.SetItalic(true)
+                .Font.SetFontColor(XLColor.Gray)
+                .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+            worksheet.Range("A18:B18").Merge();
         }
 
         protected void btnExportCSV_Click(object sender, EventArgs e)
         {
-            // In a real implementation, this would generate a CSV report
-            // For now, just create a simple alert
-            ScriptManager.RegisterStartupScript(this, GetType(), "alertMessage",
-                "alert('CSV export functionality would be implemented here.');", true);
+            try
+            {
+                // Create a unique temp directory for our CSV files
+                string tempFolder = Path.Combine(Path.GetTempPath(), "InventoryReports_" + Guid.NewGuid().ToString());
+                Directory.CreateDirectory(tempFolder);
+
+                try
+                {
+                    // Generate individual CSV files
+                    GenerateOverviewCSV(tempFolder);
+                    GenerateMovementCSV(tempFolder);
+                    GenerateCategoryCSV(tempFolder);
+                    GenerateAIStatsCSV(tempFolder);
+                    GenerateReadMeText(tempFolder);
+
+                    // Set the output content type and headers for CSV
+                    Response.Clear();
+                    Response.ContentType = "text/csv";
+                    Response.AddHeader("content-disposition", $"attachment;filename=InventoryReport_{_startDate:yyyy-MM-dd}_to_{_endDate:yyyy-MM-dd}.csv");
+                    
+                    // Since we can't easily create a ZIP due to assembly reference issues,
+                    // we'll combine all CSVs into a single CSV with section headers
+                    using (StreamWriter writer = new StreamWriter(Response.OutputStream))
+                    {
+                        // Add Overview data
+                        writer.WriteLine("=========================================================");
+                        writer.WriteLine("INVENTORY MANAGEMENT REPORT - DASHBOARD OVERVIEW");
+                        writer.WriteLine("=========================================================");
+                        writer.WriteLine($"Date Range: {_startDate:yyyy-MM-dd} to {_endDate:yyyy-MM-dd}");
+                        string categoryText = _categoryId > 0 ? ddlCategory.SelectedItem.Text : "All Categories";
+                        writer.WriteLine($"Category Filter: {categoryText}");
+                        writer.WriteLine();
+                        
+                        writer.WriteLine("Metric,Value");
+                        writer.WriteLine($"Total Items,{lblTotalItems.Text}");
+                        writer.WriteLine($"Total Categories,{lblTotalCategories.Text}");
+                        writer.WriteLine($"Total Stock,{lblTotalStock.Text}");
+                        writer.WriteLine($"Low Stock Items,{lblLowStock.Text}");
+                        
+                        writer.WriteLine();
+                        writer.WriteLine("Movement Statistics,Count");
+                        var movementStats = _inventoryService.GetInventoryMovementStats(_startDate, _endDate);
+                        writer.WriteLine($"Stock In,{movementStats["StockIn"]}");
+                        writer.WriteLine($"Stock Out,{movementStats["StockOut"]}");
+                        writer.WriteLine($"Created,{movementStats["Created"]}");
+                        writer.WriteLine($"Updated,{movementStats["Updated"]}");
+                        writer.WriteLine($"Deleted,{movementStats["Deleted"]}");
+                        
+                        // Add Inventory Movement data
+                        writer.WriteLine();
+                        writer.WriteLine("=========================================================");
+                        writer.WriteLine("INVENTORY MOVEMENT DETAILS");
+                        writer.WriteLine("=========================================================");
+                        writer.WriteLine();
+                        
+                        writer.WriteLine("Date,Action,Item,Quantity,Notes,User");
+                        var movementDetails = _inventoryService.GetItemHistoryForReporting(_startDate, _endDate, _categoryId);
+                        foreach (var item in movementDetails)
+                        {
+                            writer.WriteLine(
+                                $"{EscapeCsvField(item.ChangedDate.ToString("yyyy-MM-dd HH:mm:ss"))}," +
+                                $"{EscapeCsvField(GetActionTypeDisplay(item.ChangeType))}," +
+                                $"{EscapeCsvField(item.ItemName)}," +
+                                $"{EscapeCsvField(FormatQuantityChange(item.ChangeType, item.QuantityChanged))}," +
+                                $"{EscapeCsvField(item.Notes ?? "")}," +
+                                $"{EscapeCsvField(item.ChangedByUsername)}"
+                            );
+                        }
+                        
+                        // Add Category Analysis data
+                        writer.WriteLine();
+                        writer.WriteLine("=========================================================");
+                        writer.WriteLine("CATEGORY ANALYSIS");
+                        writer.WriteLine("=========================================================");
+                        writer.WriteLine();
+                        
+                        writer.WriteLine("Category,Items,Percentage");
+                        var categoryDistribution = _inventoryService.GetCategoryDistribution();
+                        if (_categoryId > 0)
+                        {
+                            categoryDistribution = categoryDistribution
+                                .Where(c => c.CategoryID == _categoryId)
+                                .ToList();
+                        }
+                        
+                        int totalItems = categoryDistribution.Sum(c => c.ItemCount);
+                        foreach (var category in categoryDistribution)
+                        {
+                            double percentage = totalItems > 0 ? (double)category.ItemCount / totalItems : 0;
+                            writer.WriteLine(
+                                $"{EscapeCsvField(category.Name)}," +
+                                $"{category.ItemCount}," +
+                                $"{percentage.ToString("P1", CultureInfo.InvariantCulture)}"
+                            );
+                        }
+                        
+                        writer.WriteLine(
+                            $"{EscapeCsvField("TOTAL")}," +
+                            $"{totalItems}," +
+                            $"{(totalItems > 0 ? "100.0%" : "0.0%")}"
+                        );
+                        
+                        // Add AI Stats data
+                        writer.WriteLine();
+                        writer.WriteLine("=========================================================");
+                        writer.WriteLine("AI RECOGNITION STATISTICS");
+                        writer.WriteLine("=========================================================");
+                        writer.WriteLine();
+                        
+                        writer.WriteLine("AI TAGS USAGE");
+                        writer.WriteLine("Status,Count");
+                        var aiStats = _inventoryService.GetAIRecognitionStats(_startDate, _endDate);
+                        writer.WriteLine($"Items with AI Tags,{aiStats["WithAITags"]}");
+                        writer.WriteLine($"Items without AI Tags,{aiStats["WithoutAITags"]}");
+                        
+                        writer.WriteLine();
+                        writer.WriteLine("IMAGE USAGE");
+                        writer.WriteLine("Status,Count");
+                        writer.WriteLine($"Items with Images,{aiStats["WithImages"]}");
+                        writer.WriteLine($"Items without Images,{aiStats["WithoutImages"]}");
+                        
+                        writer.WriteLine();
+                        writer.WriteLine("=========================================================");
+                        writer.WriteLine($"Report generated on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+                        writer.WriteLine("=========================================================");
+                    }
+                    
+                    Response.End();
+                }
+                finally
+                {
+                    // Clean up temp directory and files
+                    try
+                    {
+                        if (Directory.Exists(tempFolder))
+                        {
+                            Directory.Delete(tempFolder, true);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Error cleaning up temp files: {ex.Message}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ScriptManager.RegisterStartupScript(this, GetType(), "alertMessage",
+                    $"alert('Error exporting to CSV: {ex.Message}');", true);
+                System.Diagnostics.Debug.WriteLine($"CSV Export Error: {ex.Message}");
+            }
+        }
+
+        private void GenerateReadMeText(string folderPath)
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine("INVENTORY MANAGEMENT REPORT");
+            sb.AppendLine("==========================");
+            sb.AppendLine();
+            sb.AppendLine($"Generated on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+            sb.AppendLine($"Date Range: {_startDate:yyyy-MM-dd} to {_endDate:yyyy-MM-dd}");
+            
+            string categoryText = _categoryId > 0 ? ddlCategory.SelectedItem.Text : "All Categories";
+            sb.AppendLine($"Category Filter: {categoryText}");
+            sb.AppendLine();
+            sb.AppendLine("Files included in this package:");
+            sb.AppendLine("1. Overview.csv - Dashboard overview metrics");
+            sb.AppendLine("2. InventoryMovement.csv - Detailed inventory movement history");
+            sb.AppendLine("3. CategoryAnalysis.csv - Category distribution analysis");
+            sb.AppendLine("4. AIStats.csv - AI recognition statistics");
+            sb.AppendLine();
+            sb.AppendLine("For any issues with this report, please contact the system administrator.");
+
+            File.WriteAllText(Path.Combine(folderPath, "README.txt"), sb.ToString());
+        }
+
+        private void GenerateOverviewCSV(string folderPath)
+        {
+            string filePath = Path.Combine(folderPath, "Overview.csv");
+            
+            using (StreamWriter writer = new StreamWriter(filePath, false, Encoding.UTF8))
+            {
+                // Write header
+                writer.WriteLine("Metric,Value");
+                
+                // Write data
+                writer.WriteLine($"Total Items,{lblTotalItems.Text}");
+                writer.WriteLine($"Total Categories,{lblTotalCategories.Text}");
+                writer.WriteLine($"Total Stock,{lblTotalStock.Text}");
+                writer.WriteLine($"Low Stock Items,{lblLowStock.Text}");
+
+                // Add movement stats summary
+                writer.WriteLine();
+                writer.WriteLine("Movement Statistics,Count");
+                
+                var movementStats = _inventoryService.GetInventoryMovementStats(_startDate, _endDate);
+                writer.WriteLine($"Stock In,{movementStats["StockIn"]}");
+                writer.WriteLine($"Stock Out,{movementStats["StockOut"]}");
+                writer.WriteLine($"Created,{movementStats["Created"]}");
+                writer.WriteLine($"Updated,{movementStats["Updated"]}");
+                writer.WriteLine($"Deleted,{movementStats["Deleted"]}");
+            }
+        }
+
+        private void GenerateMovementCSV(string folderPath)
+        {
+            string filePath = Path.Combine(folderPath, "InventoryMovement.csv");
+            
+            using (StreamWriter writer = new StreamWriter(filePath, false, Encoding.UTF8))
+            {
+                // Write header
+                writer.WriteLine("Date,Action,Item,Quantity,Notes,User");
+                
+                // Get movement details
+                var movementDetails = _inventoryService.GetItemHistoryForReporting(_startDate, _endDate, _categoryId);
+                
+                // Write data rows
+                foreach (var item in movementDetails)
+                {
+                    writer.WriteLine(
+                        $"{EscapeCsvField(item.ChangedDate.ToString("yyyy-MM-dd HH:mm:ss"))}," +
+                        $"{EscapeCsvField(GetActionTypeDisplay(item.ChangeType))}," +
+                        $"{EscapeCsvField(item.ItemName)}," +
+                        $"{EscapeCsvField(FormatQuantityChange(item.ChangeType, item.QuantityChanged))}," +
+                        $"{EscapeCsvField(item.Notes ?? "")}," +
+                        $"{EscapeCsvField(item.ChangedByUsername)}"
+                    );
+                }
+            }
+        }
+
+        private void GenerateCategoryCSV(string folderPath)
+        {
+            string filePath = Path.Combine(folderPath, "CategoryAnalysis.csv");
+            
+            using (StreamWriter writer = new StreamWriter(filePath, false, Encoding.UTF8))
+            {
+                // Write header
+                writer.WriteLine("Category,Items,Percentage");
+                
+                // Get category distribution
+                var categoryDistribution = _inventoryService.GetCategoryDistribution();
+                
+                // Apply category filter if selected
+                if (_categoryId > 0)
+                {
+                    categoryDistribution = categoryDistribution
+                        .Where(c => c.CategoryID == _categoryId)
+                        .ToList();
+                }
+                
+                // Calculate total items for percentage
+                int totalItems = categoryDistribution.Sum(c => c.ItemCount);
+                
+                // Write data rows
+                foreach (var category in categoryDistribution)
+                {
+                    double percentage = totalItems > 0 ? (double)category.ItemCount / totalItems : 0;
+                    writer.WriteLine(
+                        $"{EscapeCsvField(category.Name)}," +
+                        $"{category.ItemCount}," +
+                        $"{percentage.ToString("P1", CultureInfo.InvariantCulture)}"
+                    );
+                }
+                
+                // Add total row
+                writer.WriteLine(
+                    $"{EscapeCsvField("TOTAL")}," +
+                    $"{totalItems}," +
+                    $"{(totalItems > 0 ? "100.0%" : "0.0%")}"
+                );
+            }
+        }
+
+        private void GenerateAIStatsCSV(string folderPath)
+        {
+            string filePath = Path.Combine(folderPath, "AIStats.csv");
+            
+            using (StreamWriter writer = new StreamWriter(filePath, false, Encoding.UTF8))
+            {
+                // Get AI stats
+                var aiStats = _inventoryService.GetAIRecognitionStats(_startDate, _endDate);
+                
+                // Write AI Tags section
+                writer.WriteLine("AI TAGS USAGE");
+                writer.WriteLine("Status,Count");
+                writer.WriteLine($"Items with AI Tags,{aiStats["WithAITags"]}");
+                writer.WriteLine($"Items without AI Tags,{aiStats["WithoutAITags"]}");
+                
+                // Add space between sections
+                writer.WriteLine();
+                
+                // Write Image Usage section
+                writer.WriteLine("IMAGE USAGE");
+                writer.WriteLine("Status,Count");
+                writer.WriteLine($"Items with Images,{aiStats["WithImages"]}");
+                writer.WriteLine($"Items without Images,{aiStats["WithoutImages"]}");
+            }
+        }
+
+        private string EscapeCsvField(string field)
+        {
+            if (string.IsNullOrEmpty(field))
+                return "";
+            
+            // Check if the field contains special characters that need escaping
+            bool needsEscaping = field.Contains(",") || field.Contains("\"") || field.Contains("\n") || field.Contains("\r");
+            
+            if (needsEscaping)
+            {
+                // Double up any quotes and surround with quotes
+                return "\"" + field.Replace("\"", "\"\"") + "\"";
+            }
+            
+            return field;
         }
 
         protected void btnLogout_Click(object sender, EventArgs e)

@@ -43,6 +43,52 @@ namespace Manajemen_Inventaris.Pages.Dashboard.Inventory
 
                 // Set default quantity to 1
                 txtQuantity.Text = "1";
+                
+                // Check if image path is provided in query string
+                string imagePath = Request.QueryString["imagePath"];
+                
+                if (!string.IsNullOrEmpty(imagePath))
+                {
+                    // Get image from server path
+                    _uploadedImagePath = imagePath;
+                    
+                    // Set image preview
+                    imgPreview.ImageUrl = imagePath;
+                    imgPreview.Style["display"] = "block";
+                    uploadIcon.Visible = false;
+                    
+                    System.Diagnostics.Debug.WriteLine("Image loaded from path: " + imagePath);
+                    
+                    // Convert server image to base64 for AI processing
+                    try
+                    {
+                        string filePath = Server.MapPath(imagePath);
+                        if (File.Exists(filePath))
+                        {
+                            byte[] imageBytes = File.ReadAllBytes(filePath);
+                            _imageBase64 = Convert.ToBase64String(imageBytes);
+                            
+                            // Check if a category was selected
+                            if (Request.QueryString["categoryId"] != null)
+                            {
+                                int categoryId;
+                                if (int.TryParse(Request.QueryString["categoryId"], out categoryId))
+                                {
+                                    // Select the category in dropdown
+                                    ddlCategory.SelectedValue = categoryId.ToString();
+                                    System.Diagnostics.Debug.WriteLine("Selected category ID: " + categoryId);
+                                }
+                            }
+                            
+                            // Generate tags automatically
+                            RegisterAsyncTask(new PageAsyncTask(GenerateTagsAsync));
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine("Error loading server image: " + ex.Message);
+                    }
+                }
             }
             else
             {

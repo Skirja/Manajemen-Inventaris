@@ -43,5 +43,26 @@ namespace Manajemen_Inventaris.Services
         /// <param name="category">Optional category information</param>
         /// <returns>A generated description for the item</returns>
         Task<string> GenerateDescriptionAsync(string imageBase64, string itemName, List<string> tags = null, string category = null);
+        
+        /// <summary>
+        /// Process multiple images in a batch for AI analysis
+        /// </summary>
+        /// <param name="imageBase64List">List of Base64-encoded image data</param>
+        /// <returns>A list of batch processing results for each image</returns>
+        Task<List<BatchProcessItem>> ProcessImagesAsync(List<string> imageBase64List);
+        
+        /// <summary>
+        /// Detect and identify objects in an image
+        /// </summary>
+        /// <param name="imageBase64">Base64-encoded image data</param>
+        /// <returns>Results with detected objects and their properties</returns>
+        Task<ObjectDetectionResult> DetectObjectsAsync(string imageBase64);
+        
+        /// <summary>
+        /// Process and decode barcodes or QR codes in an image
+        /// </summary>
+        /// <param name="imageBase64">Base64-encoded image data</param>
+        /// <returns>Results with decoded code information</returns>
+        Task<CodeProcessingResult> ProcessCodesAsync(string imageBase64);
     }
 }

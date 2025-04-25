@@ -10,6 +10,21 @@ using System.Configuration;
 namespace Manajemen_Inventaris.Services
 {
     /// <summary>
+    /// Represents an item in the batch processing queue
+    /// </summary>
+    [Serializable]
+    public class BatchProcessItem
+    {
+        public string FileName { get; set; }
+        public string Status { get; set; }
+        public string Category { get; set; }
+        public double Confidence { get; set; }
+        public string FilePath { get; set; }
+        public string ErrorMessage { get; set; }
+        public DateTime ProcessedTime { get; set; }
+    }
+
+    /// <summary>
     /// Implementation of the AI service
     /// </summary>
     public class AIService : IAIService
@@ -27,7 +42,7 @@ namespace Manajemen_Inventaris.Services
             System.Net.ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls12;
 
             _httpClient = new HttpClient();
-            _baseUrl = ConfigurationManager.AppSettings["AIServiceBaseUrl"] ?? "http://localhost:3000/api/v1/inventory";
+            _baseUrl = ConfigurationManager.AppSettings["AIServiceBaseUrl"] ?? "http://localhost:3000/api/v1";
             _apiToken = ConfigurationManager.AppSettings["AIServiceToken"] ?? "2MzYzVvZoBMDDc/CkII7WE6Cv4+Mi07GR+GDsyEoLOM=";
 
             // Set a timeout to prevent hanging if service is unresponsive
@@ -77,7 +92,7 @@ namespace Manajemen_Inventaris.Services
 
                 System.Diagnostics.Debug.WriteLine($"Sending API request for tag generation: Tags={tagsList.Count}, Category={category}, HasImage={!string.IsNullOrEmpty(imageBase64)}");
 
-                var response = await PostToApiAsync<dynamic, TagGenerationResponse>("/generate-tags", requestData);
+                var response = await PostToApiAsync<dynamic, TagGenerationResponse>("/inventory/generate-tags", requestData);
 
                 if (response?.tags != null)
                 {
@@ -155,7 +170,7 @@ namespace Manajemen_Inventaris.Services
 
                 System.Diagnostics.Debug.WriteLine($"Sending API request for category suggestion with {existingCategories?.Count ?? 0} categories. HasImage={!string.IsNullOrEmpty(imageBase64)}");
 
-                var response = await PostToApiAsync<dynamic, CategorySuggestionResponse>("/suggest-category", requestData);
+                var response = await PostToApiAsync<dynamic, CategorySuggestionResponse>("/inventory/suggest-category", requestData);
 
                 if (response?.categories != null)
                 {
@@ -214,7 +229,7 @@ namespace Manajemen_Inventaris.Services
                     currentCategory = currentCategory
                 };
 
-                var response = await PostToApiAsync<dynamic, SearchEnhancementResponse>("/enhance-search", requestData);
+                var response = await PostToApiAsync<dynamic, SearchEnhancementResponse>("/inventory/enhance-search", requestData);
 
                 if (response?.enhancedTerms != null && response.enhancedTerms.Count > 0)
                 {
@@ -272,7 +287,7 @@ namespace Manajemen_Inventaris.Services
                     category = category
                 };
 
-                var response = await PostToApiAsync<dynamic, DescriptionGenerationResponse>("/generate-description", requestData);
+                var response = await PostToApiAsync<dynamic, DescriptionGenerationResponse>("/inventory/generate-description", requestData);
 
                 if (response?.description != null)
                 {
@@ -299,6 +314,227 @@ namespace Manajemen_Inventaris.Services
             }
         }
 
+        // New method for batch image processing
+        public async Task<List<BatchProcessItem>> ProcessImagesAsync(List<string> imageBase64List)
+        {
+            try
+            {
+                var result = new List<BatchProcessItem>();
+                
+                // Prepare the images array for the API request
+                var images = new List<object>();
+                for (int i = 0; i < imageBase64List.Count; i++)
+                {
+                    string imageBase64 = imageBase64List[i];
+                    
+                    // Ensure image data is properly formatted
+                    if (!string.IsNullOrEmpty(imageBase64) && !imageBase64.StartsWith("data:image/"))
+                    {
+                        // Try to detect the image type from the first few bytes
+                        string mimeType = "image/jpeg"; // Default to JPEG
+                        if (imageBase64.Length > 10)
+                        {
+                            byte[] bytes = Convert.FromBase64String(imageBase64.Substring(0, Math.Min(20, imageBase64.Length)));
+                            if (bytes.Length >= 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF)
+                            {
+                                mimeType = "image/jpeg";
+                            }
+                            else if (bytes.Length >= 8 && bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47)
+                            {
+                                mimeType = "image/png";
+                            }
+                        }
+
+                        imageBase64 = $"data:{mimeType};base64,{imageBase64}";
+                    }
+                    
+                    images.Add(new
+                    {
+                        id = $"img_{i}",
+                        data = imageBase64
+                    });
+                }
+                
+                var requestData = new
+                {
+                    images = images,
+                    options = new
+                    {
+                        generateTags = true,
+                        suggestCategories = true,
+                        generateDescriptions = false
+                    }
+                };
+                
+                System.Diagnostics.Debug.WriteLine($"Sending API request for batch image processing with {images.Count} images");
+                
+                var response = await PostToApiAsync<dynamic, BatchProcessingResponse>("/upload/process-images", requestData);
+                
+                if (response != null && response.success && response.results != null)
+                {
+                    foreach (var item in response.results)
+                    {
+                        var processedItem = new BatchProcessItem
+                        {
+                            FileName = $"Image {Array.IndexOf(response.results, item) + 1}",
+                            Status = item.success ? "Completed" : "Failed",
+                            ProcessedTime = DateTime.Now
+                        };
+                        
+                        // Extract category if available
+                        if (item.categories != null && ((dynamic)item.categories).Count > 0)
+                        {
+                            processedItem.Category = ((dynamic)item.categories)[0].ToString();
+                        }
+                        
+                        // Set confidence if available in tags
+                        if (item.tags != null && ((dynamic)item.tags).Count > 0)
+                        {
+                            var firstTag = ((dynamic)item.tags)[0];
+                            if (firstTag.confidence != null)
+                            {
+                                processedItem.Confidence = Convert.ToDouble(firstTag.confidence);
+                            }
+                        }
+                        
+                        if (item.error != null)
+                        {
+                            processedItem.ErrorMessage = item.error.ToString();
+                        }
+                        
+                        result.Add(processedItem);
+                    }
+                }
+                
+                return result;
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                System.Diagnostics.Debug.WriteLine($"Error processing images in batch: {ex.Message}");
+                if (ex.InnerException != null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Inner exception: {ex.InnerException.Message}");
+                }
+                return new List<BatchProcessItem>();
+            }
+        }
+
+        // New method for object detection
+        public async Task<ObjectDetectionResult> DetectObjectsAsync(string imageBase64)
+        {
+            try
+            {
+                // Ensure image data is properly formatted
+                if (!string.IsNullOrEmpty(imageBase64) && !imageBase64.StartsWith("data:image/"))
+                {
+                    // Try to detect the image type from the first few bytes
+                    string mimeType = "image/jpeg"; // Default to JPEG
+                    if (imageBase64.Length > 10)
+                    {
+                        byte[] bytes = Convert.FromBase64String(imageBase64.Substring(0, Math.Min(20, imageBase64.Length)));
+                        if (bytes.Length >= 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF)
+                        {
+                            mimeType = "image/jpeg";
+                        }
+                        else if (bytes.Length >= 8 && bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47)
+                        {
+                            mimeType = "image/png";
+                        }
+                    }
+
+                    imageBase64 = $"data:{mimeType};base64,{imageBase64}";
+                }
+                
+                var requestData = new
+                {
+                    image = imageBase64,
+                    settings = new
+                    {
+                        sensitivity = 0.7
+                    }
+                };
+                
+                System.Diagnostics.Debug.WriteLine($"Sending API request for object detection");
+                
+                var response = await PostToApiAsync<dynamic, ObjectDetectionResponse>("/upload/detect-objects", requestData);
+                
+                if (response != null && response.success)
+                {
+                    return new ObjectDetectionResult
+                    {
+                        Objects = response.objects ?? new List<DetectedObject>(),
+                        ImageWidth = response.imageWidth,
+                        ImageHeight = response.imageHeight,
+                        Success = true
+                    };
+                }
+                
+                return new ObjectDetectionResult { Success = false };
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                System.Diagnostics.Debug.WriteLine($"Error detecting objects: {ex.Message}");
+                return new ObjectDetectionResult { Success = false };
+            }
+        }
+
+        // New method for processing barcodes
+        public async Task<CodeProcessingResult> ProcessCodesAsync(string imageBase64)
+        {
+            try
+            {
+                // Ensure image data is properly formatted
+                if (!string.IsNullOrEmpty(imageBase64) && !imageBase64.StartsWith("data:image/"))
+                {
+                    // Try to detect the image type from the first few bytes
+                    string mimeType = "image/jpeg"; // Default to JPEG
+                    if (imageBase64.Length > 10)
+                    {
+                        byte[] bytes = Convert.FromBase64String(imageBase64.Substring(0, Math.Min(20, imageBase64.Length)));
+                        if (bytes.Length >= 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF)
+                        {
+                            mimeType = "image/jpeg";
+                        }
+                        else if (bytes.Length >= 8 && bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47)
+                        {
+                            mimeType = "image/png";
+                        }
+                    }
+
+                    imageBase64 = $"data:{mimeType};base64,{imageBase64}";
+                }
+                
+                var requestData = new
+                {
+                    image = imageBase64,
+                    codeType = "any"
+                };
+                
+                System.Diagnostics.Debug.WriteLine($"Sending API request for code processing");
+                
+                var response = await PostToApiAsync<dynamic, CodeProcessingResponse>("/upload/process-codes", requestData);
+                
+                if (response != null && response.success)
+                {
+                    return new CodeProcessingResult
+                    {
+                        Codes = response.codes ?? new List<CodeResult>(),
+                        Success = true
+                    };
+                }
+                
+                return new CodeProcessingResult { Success = false };
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                System.Diagnostics.Debug.WriteLine($"Error processing codes: {ex.Message}");
+                return new CodeProcessingResult { Success = false };
+            }
+        }
+
         #region Private Helper Methods
 
         private async Task<TResponse> PostToApiAsync<TRequest, TResponse>(string endpoint, TRequest requestData)
@@ -308,6 +544,8 @@ namespace Manajemen_Inventaris.Services
 
             try
             {
+                System.Diagnostics.Debug.WriteLine($"Calling AI service at URL: {fullUrl}");
+                
                 var response = await _httpClient.PostAsync(fullUrl, content);
 
                 if (response.IsSuccessStatusCode)
@@ -333,6 +571,10 @@ namespace Manajemen_Inventaris.Services
             catch (HttpRequestException ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Network error: {ex.Message}");
+                if (ex.InnerException != null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Inner exception: {ex.InnerException.Message}");
+                }
                 throw new Exception($"Network error when calling AI service: {ex.Message}", ex);
             }
             catch (TaskCanceledException ex)
@@ -395,7 +637,81 @@ namespace Manajemen_Inventaris.Services
             public string description { get; set; }
             public bool success { get; set; }
         }
+        
+        private class BatchProcessingResponse
+        {
+            public int processed { get; set; }
+            public int failed { get; set; }
+            public dynamic[] results { get; set; }
+            public bool success { get; set; }
+        }
+        
+        private class ObjectDetectionResponse
+        {
+            public List<DetectedObject> objects { get; set; }
+            public int imageWidth { get; set; }
+            public int imageHeight { get; set; }
+            public bool success { get; set; }
+        }
+        
+        private class CodeProcessingResponse
+        {
+            public List<CodeResult> codes { get; set; }
+            public bool success { get; set; }
+        }
 
         #endregion
+    }
+    
+    public class ObjectDetectionResult
+    {
+        public List<DetectedObject> Objects { get; set; } = new List<DetectedObject>();
+        public int ImageWidth { get; set; }
+        public int ImageHeight { get; set; }
+        public bool Success { get; set; }
+    }
+    
+    public class DetectedObject
+    {
+        public string Label { get; set; }
+        public double Confidence { get; set; }
+        public BoundingBox BoundingBox { get; set; }
+        public List<string> SuggestedTags { get; set; } = new List<string>();
+    }
+    
+    public class BoundingBox
+    {
+        public double X { get; set; }
+        public double Y { get; set; }
+        public double Width { get; set; }
+        public double Height { get; set; }
+    }
+    
+    public class CodeProcessingResult
+    {
+        public List<CodeResult> Codes { get; set; } = new List<CodeResult>();
+        public bool Success { get; set; }
+    }
+    
+    public class CodeResult
+    {
+        public string Type { get; set; }
+        public string Format { get; set; }
+        public string Content { get; set; }
+        public CodeLocation Location { get; set; }
+    }
+    
+    public class CodeLocation
+    {
+        public Point TopLeft { get; set; }
+        public Point TopRight { get; set; }
+        public Point BottomLeft { get; set; }
+        public Point BottomRight { get; set; }
+    }
+    
+    public class Point
+    {
+        public int X { get; set; }
+        public int Y { get; set; }
     }
 }
